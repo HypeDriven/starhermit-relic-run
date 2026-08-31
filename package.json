@@ -1,0 +1,19 @@
+{
+  "name": "relic-run",
+  "version": "1.0.0",
+  "description": "Relic Run - branching runner through overgrown ruins",
+  "type": "module",
+  "scripts": {
+    "test": "node node_modules/vitest/vitest.mjs run",
+    "smoke": "node test/smoke.mjs",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "puppeteer-core": "^25.9.0",
+    "three": "^0.185.1",
+    "vitest": "^3.0.5"
+  }
+}

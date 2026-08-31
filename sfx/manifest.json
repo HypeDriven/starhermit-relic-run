@@ -1,0 +1,80 @@
+[
+  {
+    "name": "jump-leap",
+    "seconds": 1,
+    "prompt": "Quick airy whoosh of a runner leaping upward, soft cloth rustle and a short rising breath of wind, no music, clean one-shot.",
+    "event": "jump"
+  },
+  {
+    "name": "turn-swat",
+    "seconds": 1,
+    "prompt": "Short swishing whoosh of a body pivoting sharply, like a quick footstep scuff on stone with a light fabric swat, dry and snappy.",
+    "event": "turn"
+  },
+  {
+    "name": "slide-rush",
+    "seconds": 2,
+    "prompt": "Low friction rush of boots sliding across gritty stone and leaves, a sustained scraping swoosh that tapers off, no music.",
+    "event": "slide"
+  },
+  {
+    "name": "relic-pickup",
+    "seconds": 1,
+    "prompt": "Bright metallic clink of a small ancient coin or relic fragment being snatched up, with a tiny crystalline shimmer, short and clean.",
+    "event": "collect"
+  },
+  {
+    "name": "set-bonus-chime",
+    "seconds": 2,
+    "prompt": "Three small bronze temple bells struck in quick rising order, resonant warm chimes with a gentle stone-room echo, ceremonial and rewarding.",
+    "event": "setbonus"
+  },
+  {
+    "name": "fork-branch",
+    "seconds": 1,
+    "prompt": "Creak and snap of a wooden branch bending then springing back, leaves rustling as a path splits, dry wooden thunk at the end.",
+    "event": "branch"
+  },
+  {
+    "name": "vine-crash",
+    "seconds": 2,
+    "prompt": "Heavy thud of a runner slamming into a thick vine barrier, woody impact, snapping twigs and a burst of rustling leaves, dull and weighty.",
+    "event": "crash"
+  },
+  {
+    "name": "fall-whistle",
+    "seconds": 2,
+    "prompt": "Descending airy whistle of something plummeting into a deep gap, fading wind rush downward into silence, no voice, no music.",
+    "event": "fell"
+  },
+  {
+    "name": "finish-fanfare",
+    "seconds": 3,
+    "prompt": "Triumphant short fanfare of a small horn and hand drum at an ancient temple gate, bright rising call with a warm wooden percussion hit, ceremonial.",
+    "event": "finish"
+  },
+  {
+    "name": "ui-click",
+    "seconds": 1,
+    "prompt": "Very short soft tap of a fingertip on a polished wooden button, gentle muted click, minimal and dry.",
+    "event": "click"
+  },
+  {
+    "name": "ui-invalid",
+    "seconds": 1,
+    "prompt": "Dull muted knock on hollow wood followed by a tiny rattle, a short negative rejection thud, dry and flat.",
+    "event": "invalid"
+  },
+  {
+    "name": "count-tick",
+    "seconds": 1,
+    "prompt": "Single crisp tick of a small stone struck against bamboo, short percussive countdown blip, dry and precise.",
+    "event": "countdown"
+  },
+  {
+    "name": "run-go",
+    "seconds": 1,
+    "prompt": "Sharp bright strike of a temple wood block with a quick whoosh of air, an energetic starting signal, short and punchy.",
+    "event": "go"
+  }
+]

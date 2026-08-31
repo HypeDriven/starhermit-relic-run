@@ -1,0 +1,133 @@
+{
+ "global": [],
+ "daily": [
+  {
+   "player": "smoke-runner",
+   "score": 2379,
+   "breakdown": {
+    "distance": 229,
+    "fragments": 950,
+    "riskBonus": 0,
+    "setBonus": 1200,
+    "total": 2379
+   },
+   "terminal": "finished",
+   "ticks": 393,
+   "seed": 1079063496,
+   "dateKey": "2026-08-30",
+   "at": "2026-08-30T10:00:49.134Z"
+  },
+  {
+   "player": "smoke-runner",
+   "score": 2379,
+   "breakdown": {
+    "distance": 229,
+    "fragments": 950,
+    "riskBonus": 0,
+    "setBonus": 1200,
+    "total": 2379
+   },
+   "terminal": "finished",
+   "ticks": 393,
+   "seed": 1079063496,
+   "dateKey": "2026-08-30",
+   "at": "2026-08-30T10:02:15.294Z"
+  },
+  {
+   "player": "smoke-runner",
+   "score": 2379,
+   "breakdown": {
+    "distance": 229,
+    "fragments": 950,
+    "riskBonus": 0,
+    "setBonus": 1200,
+    "total": 2379
+   },
+   "terminal": "finished",
+   "ticks": 393,
+   "seed": 1079063496,
+   "dateKey": "2026-08-30",
+   "at": "2026-08-30T10:03:45.364Z"
+  },
+  {
+   "player": "smoke-runner",
+   "score": 2379,
+   "breakdown": {
+    "distance": 229,
+    "fragments": 950,
+    "riskBonus": 0,
+    "setBonus": 1200,
+    "total": 2379
+   },
+   "terminal": "finished",
+   "ticks": 393,
+   "seed": 1079063496,
+   "dateKey": "2026-08-30",
+   "at": "2026-08-30T10:05:06.515Z"
+  },
+  {
+   "player": "smoke-runner",
+   "score": 2379,
+   "breakdown": {
+    "distance": 229,
+    "fragments": 950,
+    "riskBonus": 0,
+    "setBonus": 1200,
+    "total": 2379
+   },
+   "terminal": "finished",
+   "ticks": 393,
+   "seed": 1079063496,
+   "dateKey": "2026-08-30",
+   "at": "2026-08-30T10:05:53.366Z"
+  },
+  {
+   "player": "smoke-runner",
+   "score": 2379,
+   "breakdown": {
+    "distance": 229,
+    "fragments": 950,
+    "riskBonus": 0,
+    "setBonus": 1200,
+    "total": 2379
+   },
+   "terminal": "finished",
+   "ticks": 393,
+   "seed": 1079063496,
+   "dateKey": "2026-08-30",
+   "at": "2026-08-30T10:07:11.646Z"
+  },
+  {
+   "player": "smoke-runner",
+   "score": 2379,
+   "breakdown": {
+    "distance": 229,
+    "fragments": 950,
+    "riskBonus": 0,
+    "setBonus": 1200,
+    "total": 2379
+   },
+   "terminal": "finished",
+   "ticks": 393,
+   "seed": 1079063496,
+   "dateKey": "2026-08-30",
+   "at": "2026-08-30T10:07:43.825Z"
+  },
+  {
+   "player": "smoke-runner",
+   "score": 2379,
+   "breakdown": {
+    "distance": 229,
+    "fragments": 950,
+    "riskBonus": 0,
+    "setBonus": 1200,
+    "total": 2379
+   },
+   "terminal": "finished",
+   "ticks": 393,
+   "seed": 1079063496,
+   "dateKey": "2026-08-30",
+   "at": "2026-08-30T10:09:20.284Z"
+  }
+ ]
+}
