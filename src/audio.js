@@ -1,7 +1,7 @@
 // Relic Run - WebAudio: synthesized sounds, bus mixer, adaptive music.
 // No assets; everything is generated. Seeded pitch variants keep replays
 // consistent where the event is tied to simulation state.
-import { mulberry32 } from './rules.mjs';
+import { mulberry32 } from './rules.js';
 
 const STORAGE_KEY = 'relicrun.audio.v1';
 

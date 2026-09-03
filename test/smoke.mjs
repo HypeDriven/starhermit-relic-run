@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer-core';
 
-import * as S from '../src/session.mjs';
+import * as S from '../src/session.js';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const PORT = 18923;
@@ -45,14 +45,14 @@ async function main() {
       const res = await fetch(BASE + ref);
       check(`GET ${ref}`, res.status === 200, res.headers.get('content-type') || '');
     }
-    // module graph: fetch all /src/*.mjs and three
+    // module graph: fetch all /src/*.js and vendored three
     for (const f of ['rules', 'session', 'content', 'render', 'audio', 'ui', 'store', 'platform', 'main']) {
-      const res = await fetch(`${BASE}/src/${f}.mjs`);
-      check(`GET /src/${f}.mjs`, res.status === 200 && (res.headers.get('content-type') || '').includes('javascript'));
+      const res = await fetch(`${BASE}/src/${f}.js`);
+      check(`GET /src/${f}.js`, res.status === 200 && (res.headers.get('content-type') || '').includes('javascript'));
     }
     for (const f of ['three.module.js', 'three.core.js']) {
-      const res = await fetch(`${BASE}/node_modules/three/build/${f}`);
-      check(`GET three/${f}`, res.status === 200);
+      const res = await fetch(`${BASE}/vendor/${f}`);
+      check(`GET vendor/${f}`, res.status === 200);
     }
     // path traversal
     const trav = await fetch(BASE + '/..%2f..%2fetc%2fpasswd');

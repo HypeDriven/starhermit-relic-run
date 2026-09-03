@@ -1,13 +1,13 @@
 // Relic Run - bootstrap + game controller. Wires rules/session/content/render/
 // audio/ui/store/platform together. Only validated commands mutate rules state.
-import { TICKS_PER_SECOND, UNITS_PER_CELL, MAX_HEARTS, hashState, activeBranch, createState } from './rules.mjs';
-import * as Session from './session.mjs';
-import * as Content from './content.mjs';
-import * as Render from './render.mjs';
-import * as Audio from './audio.mjs';
-import * as Store from './store.mjs';
-import * as Platform from './platform.mjs';
-import { createUI, bindSettings } from './ui.mjs';
+import { TICKS_PER_SECOND, UNITS_PER_CELL, MAX_HEARTS, hashState, activeBranch, createState } from './rules.js';
+import * as Session from './session.js';
+import * as Content from './content.js';
+import * as Render from './render.js';
+import * as Audio from './audio.js';
+import * as Store from './store.js';
+import * as Platform from './platform.js';
+import { createUI, bindSettings } from './ui.js';
 
 const TICK_MS = 1000 / TICKS_PER_SECOND;
 

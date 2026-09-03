@@ -1,6 +1,6 @@
 // Relic Run - versioned content registry: themes, journey stages, lessons,
 // daily seeds, challenges, and the offline content validator.
-import { createState, legalActions, applyCommand, step, activeBranch, defaultGenOpts, hashString } from './rules.mjs';
+import { createState, legalActions, applyCommand, step, activeBranch, defaultGenOpts, hashString } from './rules.js';
 
 export const CONTENT_VERSION = 1;
 

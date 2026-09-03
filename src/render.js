@@ -1,7 +1,7 @@
 // Relic Run - Three.js renderer: lush overgrown ruins.
 // Pooled/instanced meshes only - no per-frame geometry/material allocation.
 import * as THREE from 'three';
-import { mulberry32, UNITS_PER_CELL, LANES, activeBranch, cellIndex } from './rules.mjs';
+import { mulberry32, UNITS_PER_CELL, LANES, activeBranch, cellIndex } from './rules.js';
 
 export const LANE_X = [-2.2, 0, 2.2];
 const CELL_DEPTH = 2.0;

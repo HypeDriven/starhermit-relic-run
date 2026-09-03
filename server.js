@@ -7,10 +7,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { SCHEMA_VERSION, hashState, scoreBreakdown, compareResults, tieBreakMeta } from './src/rules.mjs';
-import * as Session from './src/session.mjs';
-import { dailyContent, dailySeedFor, utcDateKey, CONTENT_VERSION } from './src/content.mjs';
-import { ACHIEVEMENTS } from './src/store.mjs';
+import { SCHEMA_VERSION, hashState, scoreBreakdown, compareResults, tieBreakMeta } from './src/rules.js';
+import * as Session from './src/session.js';
+import { dailyContent, dailySeedFor, utcDateKey, CONTENT_VERSION } from './src/content.js';
+import { ACHIEVEMENTS } from './src/store.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(ROOT, 'data');
@@ -20,7 +20,6 @@ const ACH_FILE = path.join(DATA_DIR, 'achievements.json');
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
-  '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.txt': 'text/plain; charset=utf-8',

@@ -1,8 +1,8 @@
 // Session tests: command log, idempotency, replay property, envelopes,
 // snapshots, away summaries, tie-breaks, golden sessions.
 import { describe, it, expect } from 'vitest';
-import * as R from '../src/rules.mjs';
-import * as S from '../src/session.mjs';
+import * as R from '../src/rules.js';
+import * as S from '../src/session.js';
 
 function playWithPolicy(sess, maxTicks = 30000) {
   let guard = 0;

@@ -2,8 +2,8 @@
 // replays and rejects tampered ones.
 import { describe, it, expect } from 'vitest';
 import { verifyScore } from '../server.js';
-import * as S from '../src/session.mjs';
-import * as R from '../src/rules.mjs';
+import * as S from '../src/session.js';
+import * as R from '../src/rules.js';
 
 function honestSubmission(seed = 555, opts = {}) {
   const sess = S.startSession(S.newSession(seed, opts));

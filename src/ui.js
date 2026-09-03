@@ -1,7 +1,7 @@
 // Relic Run - DOM shell: screens, HUD, live regions, settings binding.
 // The canvas is never the only UI: every state change is mirrored to the DOM.
-import { THEMES, STAGES, LESSONS, CHALLENGES, PRACTICE_DIFFICULTIES } from './content.mjs';
-import { ACHIEVEMENTS } from './store.mjs';
+import { THEMES, STAGES, LESSONS, CHALLENGES, PRACTICE_DIFFICULTIES } from './content.js';
+import { ACHIEVEMENTS } from './store.js';
 
 const $ = (id) => document.getElementById(id);
 

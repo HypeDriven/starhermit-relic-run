@@ -1,8 +1,8 @@
 // Content tests: registry shape, validator over all stages/lessons/challenges,
 // daily seed determinism and immutability.
 import { describe, it, expect } from 'vitest';
-import * as C from '../src/content.mjs';
-import * as R from '../src/rules.mjs';
+import * as C from '../src/content.js';
+import * as R from '../src/rules.js';
 
 describe('content registry', () => {
   it('has 40 journey stages with unique ids and increasing difficulty', () => {

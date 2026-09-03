@@ -1,7 +1,7 @@
 // Relic Run - versioned, checksummed localStorage persistence.
 // Stores settings, journey progress, achievements, best scores, tutorial
 // completion. No credentials are ever stored here.
-import { hashString } from './rules.mjs';
+import { hashString } from './rules.js';
 
 const PREFIX = 'relicrun.';
 const VERSION = 1;

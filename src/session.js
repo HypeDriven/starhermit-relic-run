@@ -3,7 +3,7 @@ import {
   SCHEMA_VERSION, createState, applyCommand, step, legalActions,
   activeBranch, hashState, serialize as serializeState, deserialize as deserializeState,
   scoreBreakdown, tieBreakMeta, generateCourse, mulberry32,
-} from './rules.mjs';
+} from './rules.js';
 
 export const CONTENT_VERSION = 1;
 export const SESSION_VERSION = 2;
