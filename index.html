@@ -4,7 +4,6 @@
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<link rel="icon" href="data:,">
 <title>Relic Run</title>
 <script type="importmap">
 { "imports": { "three": "./vendor/three.module.js" } }
@@ -203,7 +202,7 @@
         <div class="hud-box"><button id="btn-pause-hud" class="secondary">Pause</button></div>
       </div>
 
-      <div id="mirror" role="note" aria-label="Upcoming hazards"></div>
+      <div id="mirror" role="note" aria-label="Upcoming hazards" tabindex="-1"></div>
       <div id="countdown" aria-hidden="true"></div>
 
       <div id="tray" aria-label="Actions">

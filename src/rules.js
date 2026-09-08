@@ -241,9 +241,10 @@ export function applyCommand(s, action) {
   }
   const b = activeBranch(s);
   if (b >= 0) {
-    // route choice
+    // route choice: mark the fork itself as resolved so the rest of the
+    // decision window plays normally and the choice survives passing the cell.
     s.route = action === 'right' ? 'risk' : 'safe';
-    s.branchResolved++;
+    s.branchResolved = b + 1;
     return { ok: true, effect: 'route', route: s.route };
   }
   if (action === 'left') s.lane--;
@@ -273,6 +274,14 @@ export function step(s) {
       s.route = 'safe';
       s.branchResolved = i + 1;
     }
+  }
+
+  // the risk route lasts only for the branch span: once the elevated hazard
+  // rates are behind the player the doubled fragment value ends with them.
+  if (s.route === 'risk') {
+    const b = s.branchResolved - 1;
+    const span = b >= 0 && cells[b] ? cells[b].branch : 0;
+    if (span && ci > b + span) s.route = 'safe';
   }
 
   // resolve cells newly entered this tick

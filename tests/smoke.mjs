@@ -2,6 +2,8 @@
 // Starts server.js on a test port, checks static resources + API, then drives
 // the real page in headless Chrome and verifies play updates the DOM.
 import { spawn } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer-core';
@@ -26,8 +28,10 @@ async function fetchJson(url, opts) {
 
 async function main() {
   // --- start server ---
+  // scratch data dir: the smoke run must not rewrite the checked-in board files
+  const dataDir = mkdtempSync(path.join(tmpdir(), 'relic-run-smoke-'));
   const srv = spawn(process.execPath, [path.join(ROOT, 'server.js')], {
-    env: { ...process.env, PORT: String(PORT) },
+    env: { ...process.env, PORT: String(PORT), RELIC_DATA_DIR: dataDir },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   srv.stderr.on('data', (d) => process.stderr.write('[server] ' + d));
@@ -57,6 +61,10 @@ async function main() {
     // path traversal
     const trav = await fetch(BASE + '/..%2f..%2fetc%2fpasswd');
     check('path traversal blocked', [403, 404].includes(trav.status));
+    for (const privatePath of ['/.git/config', '/data/leaderboard.json', '/node_modules/vitest/package.json']) {
+      check('private path blocked: ' + privatePath, (await fetch(BASE + privatePath)).status === 403);
+    }
+    check('malformed URL rejected', (await fetch(BASE + '/%ZZ')).status === 400);
     // 404 / 405
     const nf = await fetch(BASE + '/nope.js');
     check('404 for missing file', nf.status === 404);
@@ -132,6 +140,7 @@ async function main() {
     await browserChecks();
   } finally {
     srv.kill();
+    rmSync(dataDir, { recursive: true, force: true });
   }
 
   console.log(failures === 0 ? '\nSMOKE OK' : `\nSMOKE FAILED (${failures})`);
@@ -219,7 +228,8 @@ async function browserChecks() {
     await page.click('#btn-resume');
     await new Promise((r) => setTimeout(r, 400));
     const resumed = await page.$eval('#hud', (el) => el.classList.contains('active'));
-    check('resume returns to play', resumed);
+    const resumeState = await page.evaluate(() => window.__rr && `${window.__rr.machine}/${window.__rr.reason}`);
+    check('resume returns to play', resumed, resumeState);
 
     const fatal = errors.filter((e) => !/favicon|Autoplay|AudioContext|WebGL.*fallback|GroupMarkerNotSet/i.test(e));
     check('no page console errors', fatal.length === 0, fatal.slice(0, 3).join(' | '));

@@ -92,9 +92,30 @@ async function boot() {
   ui.setNet(online);
   setMachine('title', 'boot-complete');
   setMachine('profile-ready', 'profile-loaded');
+  ui.resetRail();
+  ui.setProgress(idleProgressText());
   ui.show('title');
   ui.announce('Relic Run loaded. Press Play to choose a mode.');
   requestAnimationFrame(loop);
+}
+
+// left-rail "Progress" copy: run context while playing, profile totals at rest.
+function idleProgressText() {
+  const done = Object.values(app.profile.journey.completed).filter((r) => r.finished).length;
+  return `${done} of ${Content.STAGES.length} stages finished · ${app.profile.totals.runs} runs · ${app.profile.totals.fragments} fragments.`;
+}
+
+function runProgressText(cfg) {
+  if (cfg.mode === 'journey') {
+    return `Stage ${cfg.stage.index + 1} of ${Content.STAGES.length} · unlocked through stage ${app.profile.journey.unlocked}.`;
+  }
+  if (cfg.mode === 'learn') {
+    return `Lesson ${Content.LESSONS.indexOf(cfg.lesson) + 1} of ${Content.LESSONS.length}.`;
+  }
+  if (cfg.mode === 'daily') return `Daily ${app.daily ? app.daily.dateKey : ''} · ranked.`;
+  if (cfg.mode === 'practice') return 'Practice · unranked · press U to undo.';
+  if (cfg.mode === 'challenge') return `Challenge · ${cfg.constraint ? cfg.constraint.type : 'ranked'}.`;
+  return '';
 }
 
 function buildScene(seed, genOpts, themeId) {
@@ -183,6 +204,7 @@ function startRun(config) {
   buildScene(config.seed, config.genOpts, config.theme);
   ui.setModeLabel(config.label);
   ui.setHUD({ objective: config.objective, score: 0, fragments: 0, hearts: app.sess.state.hearts, maxHearts: MAX_HEARTS, speed: app.sess.state.speed });
+  ui.setProgress(runProgressText(config));
   ui.showPlay();
   ui.announce(`${config.label}. ${config.objective}`);
   if (config.lesson) ui.toast(config.lesson.intro + ' ' + config.lesson.prompt);
@@ -238,6 +260,9 @@ function leaveRun() {
   app.sess = null;
   app.run = null;
   Audio.stopMusic();
+  Audio.stopAmbience();
+  ui.resetRail();
+  ui.setProgress(idleProgressText());
   ui.show('title');
 }
 
@@ -414,6 +439,7 @@ function updateHUDNow() {
 function onTerminal(terminal) {
   setMachine('resolving', terminal);
   Audio.stopMusic();
+  Audio.stopAmbience();
   if (terminal === 'finished') Audio.playEvent('finish');
   else if (terminal === 'fell') Audio.playEvent('fell');
   else Audio.playEvent('crash');
@@ -503,6 +529,7 @@ function onTerminal(terminal) {
   }[terminal] || 'Run over';
 
   setMachine('results', terminal);
+  ui.setProgress(progress || idleProgressText());
   ui.renderResults({ headline: `${headline} - ${bd.total} pts`, breakdown: bd, progress, achievements: earned, canNext });
   ui.show('results');
   ui.announce(`${headline}. Final score ${bd.total}.`, true);
@@ -565,11 +592,8 @@ document.addEventListener('keydown', (e) => {
         ui.toast('Camera recentered.');
       }
       break;
-    case 'Enter': {
-      const el = document.activeElement;
-      if (el && el.tagName === 'BUTTON') el.click();
-      break;
-    }
+    // Enter/Space already activate a focused button natively; handling them
+    // here as well would fire every button twice.
     default: break;
   }
 });

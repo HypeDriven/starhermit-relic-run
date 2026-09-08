@@ -39,7 +39,14 @@ export function createUI(handlers) {
       if (focusable) focusable.focus();
     }
   };
-  ui.showPlay = () => ui.show(null);
+  ui.showPlay = () => {
+    ui.show(null);
+    // Keyboard focus must leave the button that launched the run: it stays
+    // focused otherwise, and Enter would re-trigger it mid-run. The hazard
+    // mirror is a non-activating target inside the playfield.
+    const mirror = $('mirror');
+    if (mirror) mirror.focus();
+  };
 
   // --- announcements -----------------------------------------------------------
   ui.announce = (msg, assertive = false) => {
@@ -70,6 +77,16 @@ export function createUI(handlers) {
     $('rail-status').textContent = `Score ${score} · Fragments ${fragments} · Hearts ${hearts}/${maxHearts}`;
   };
 
+  ui.setProgress = (txt) => { $('rail-progress').textContent = txt || ''; };
+
+  // Back to the pre-run rail copy when no session is loaded.
+  ui.resetRail = () => {
+    $('rail-objective').textContent = 'Choose a mode to begin.';
+    $('rail-status').textContent = '';
+    $('rail-mirror').textContent = '';
+    $('mirror').textContent = '';
+  };
+
   // Concise navigable text model of upcoming hazards (canvas mirror).
   ui.updateMirror = (state, UNITS_PER_CELL) => {
     const ci = Math.floor(state.distUnits / UNITS_PER_CELL);
@@ -78,7 +95,8 @@ export function createUI(handlers) {
     for (let i = ci + 1; i <= Math.min(ci + 8, cells.length - 1); i++) {
       const c = cells[i];
       const d = i - ci;
-      if (c.branch) parts.push(`fork in ${d} (left=safe, right=risk)`);
+      // an already-chosen fork is no longer a decision: don't keep prompting
+      if (c.branch) { if (i >= state.branchResolved) parts.push(`fork in ${d} (left=safe, right=risk)`); }
       else if (c.gap) parts.push(`gap in ${d}`);
       else if (c.low) parts.push(`barrier in ${d}`);
       else if (c.relicLane >= 0) parts.push(`fragment in ${d} (${['left', 'center', 'right'][c.relicLane]} lane)`);
@@ -246,21 +264,12 @@ export function createUI(handlers) {
       { name: 'Moth Archivist', score: Math.max(80, Math.floor(bestTotal(profile) * 0.8)) },
       { name: 'Wren', score: Math.max(40, Math.floor(bestTotal(profile) * 0.5)) },
     ].sort((a, b) => b.score - a.score);
-    for (const f of mock) {
-      const item = document.createElement('div');
-      item.className = 'item';
-      item.innerHTML = `<div class="name">${f.name}</div><div>${f.score}</div>`;
-      list.append(item);
-    }
+    for (const f of mock) list.append(scoreRow(f.name, f.score));
     const bl = $('board-list');
     bl.textContent = '';
     if (board && board.entries && board.entries.length) {
-      for (const e of board.entries.slice(0, 20)) {
-        const item = document.createElement('div');
-        item.className = 'item';
-        item.innerHTML = `<div class="name">${e.player}</div><div>${e.score}</div>`;
-        bl.append(item);
-      }
+      // player names come from the server: build with text nodes, never innerHTML
+      for (const e of board.entries.slice(0, 20)) bl.append(scoreRow(e.player, e.score));
     } else {
       const item = document.createElement('div');
       item.className = 'item';
@@ -312,6 +321,11 @@ export function createUI(handlers) {
   document.querySelectorAll('[data-nav]').forEach((b) => {
     b.addEventListener('click', () => { handlers.click(); ui.show(b.dataset.nav); });
   });
+  // the compat overlay sits above every screen, so its Back button must also
+  // dismiss the overlay itself or the menus stay unreachable.
+  document.querySelectorAll('#compat [data-nav]').forEach((b) => {
+    b.addEventListener('click', () => ui.showCompat(false));
+  });
   document.querySelectorAll('[data-nav-back]').forEach((b) => {
     b.addEventListener('click', () => { handlers.click(); ui.show(ui.backTarget); });
   });
@@ -347,6 +361,18 @@ export function createUI(handlers) {
   $('set-tutorial').addEventListener('click', () => { handlers.resetTutorials(); });
 
   return ui;
+}
+
+function scoreRow(name, score) {
+  const item = document.createElement('div');
+  item.className = 'item';
+  const n = document.createElement('div');
+  n.className = 'name';
+  n.textContent = String(name);
+  const s = document.createElement('div');
+  s.textContent = String(score);
+  item.append(n, s);
+  return item;
 }
 
 function bestTotal(profile) {

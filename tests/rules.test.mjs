@@ -40,6 +40,41 @@ describe('legal actions', () => {
     expect(s.route).toBe('risk');
   });
 
+  it('keeps the risk route after passing the fork and frees other actions', () => {
+    const s = R.createState(3, { gapRate: 0, lowRate: 0, branchCount: 1, relicRate: 0 });
+    const forkCell = s.course.cells.findIndex((c) => c.branch);
+    expect(forkCell).toBeGreaterThan(0);
+    let guard = 0;
+    while (R.activeBranch(s) < 0 && guard++ < 5000) R.step(s);
+    R.applyCommand(s, 'right');
+    // the fork is settled: normal moves are legal again inside the window
+    expect(R.activeBranch(s)).toBe(-1);
+    expect(R.legalActions(s)).toContain('jump');
+    // and the choice survives crossing the fork cell
+    guard = 0;
+    while (R.cellIndex(s) <= forkCell && !s.terminal && guard++ < 5000) R.step(s);
+    expect(s.route).toBe('risk');
+  });
+
+  it('ends the risk route once the branch span is behind the player', () => {
+    const s = R.createState(3, {
+      gapRate: 0, lowRate: 0, riskGapRate: 0, riskLowRate: 0,
+      branchCount: 1, relicRate: 0, length: 400,
+    });
+    const forkCell = s.course.cells.findIndex((c) => c.branch);
+    const span = s.course.cells[forkCell].branch;
+    let guard = 0;
+    while (R.activeBranch(s) < 0 && guard++ < 5000) R.step(s);
+    R.applyCommand(s, 'right');
+    expect(forkCell + span + 2).toBeLessThan(s.course.cells.length);
+    guard = 0;
+    while (R.cellIndex(s) < forkCell + span && !s.terminal && guard++ < 5000) R.step(s);
+    expect(s.route).toBe('risk'); // still doubled on the last cell of the span
+    guard = 0;
+    while (R.cellIndex(s) <= forkCell + span && !s.terminal && guard++ < 5000) R.step(s);
+    expect(s.route).toBe('safe');
+  });
+
   it('returns no actions when terminal', () => {
     const s = R.createState(4, { gapRate: 0, lowRate: 0, branchCount: 0, relicRate: 0 });
     s.terminal = 'finished';

@@ -13,7 +13,9 @@ import { dailyContent, dailySeedFor, utcDateKey, CONTENT_VERSION } from './src/c
 import { ACHIEVEMENTS } from './src/store.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(ROOT, 'data');
+// RELIC_DATA_DIR lets tests point the board/achievement stores at a scratch
+// directory instead of writing into the checked-in data/ files.
+const DATA_DIR = process.env.RELIC_DATA_DIR ? path.resolve(process.env.RELIC_DATA_DIR) : path.join(ROOT, 'data');
 const BOARD_FILE = path.join(DATA_DIR, 'leaderboard.json');
 const ACH_FILE = path.join(DATA_DIR, 'achievements.json');
 
@@ -172,7 +174,9 @@ export function createAppServer(port = 8090) {
 
     // ---- static ----
     if (req.method !== 'GET' && req.method !== 'HEAD') return sendError(res, 405, 'method-not-allowed');
-    let rel = decodeURIComponent(p === '/' ? '/index.html' : p);
+    let rel;
+    try { rel = decodeURIComponent(p === '/' ? '/index.html' : p); } catch { return sendError(res, 400, 'bad-path'); }
+    if (rel.split(/[\\/]/).some(p => p.startsWith('.') || ['data', 'node_modules'].includes(p))) return sendError(res, 403, 'forbidden');
     // path traversal protection
     const abs = path.normalize(path.join(ROOT, rel));
     if (!abs.startsWith(ROOT + path.sep) && abs !== ROOT) return sendError(res, 403, 'forbidden');
