@@ -147,6 +147,41 @@ async function main() {
   process.exit(failures === 0 ? 0 : 1);
 }
 
+// Practice seeds are time-random and some generated courses drop a gap in the
+// opening cells, which ends an unattended run within a second. To keep the
+// browser checks deterministic, drive survival inputs through real key events
+// using the same look-ahead policy as the content validator: read the course
+// from the debug handle and jump/slide before the next hazard.
+let driveTimer = null;
+function startSurvivalDriver(page) {
+  const tick = async () => {
+    try {
+      const act = await page.evaluate(() => {
+        const app = window.__rr;
+        if (!app || app.machine !== 'active' || !app.sess) return null;
+        const s = app.sess.state;
+        if (s.terminal) return null;
+        const ci = Math.floor(s.distUnits / 24);
+        const cells = s.course.cells;
+        for (let d = 1; d <= 3; d++) {
+          const c = cells[Math.min(ci + d, cells.length - 1)];
+          if (!c) continue;
+          if (c.gap && s.airTicks === 0) return 'jump';
+          if (c.low && s.slideTicks === 0 && s.stunTicks === 0) return 'slide';
+        }
+        return null;
+      });
+      if (act) await page.keyboard.press(act === 'jump' ? 'ArrowUp' : 'ArrowDown');
+    } catch { /* page closed or navigating; driver stops on next tick */ }
+    driveTimer = setTimeout(tick, 90);
+  };
+  driveTimer = setTimeout(tick, 90);
+}
+function stopSurvivalDriver() {
+  if (driveTimer) clearTimeout(driveTimer);
+  driveTimer = null;
+}
+
 async function browserChecks() {
   const browser = await puppeteer.launch({
     executablePath: '/usr/bin/google-chrome',
@@ -189,13 +224,19 @@ async function browserChecks() {
     check('run reaches active state', becameActive);
     const hud = await page.$eval('#hud', (el) => el.classList.contains('active'));
     check('HUD active during run', hud);
+    startSurvivalDriver(page);
 
-    // Score accrues with distance automatically; sample twice while still active.
-    const score1 = await page.$eval('#hud-score', (el) => parseInt(el.textContent, 10));
-    await new Promise((r) => setTimeout(r, 400));
-    const stillActive = (await page.evaluate(() => window.__rr.machine)) === 'active';
-    const score2 = await page.$eval('#hud-score', (el) => parseInt(el.textContent, 10));
-    check('score DOM updates during run', stillActive && score2 > score1, `${score1} -> ${score2} active=${stillActive}`);
+    // Score accrues with distance automatically; sample until it advances
+    // while the run is still active (HUD refreshes every 10 ticks).
+    let score1 = 0, score2 = 0, scoreOk = false;
+    for (let i = 0; i < 12 && !scoreOk; i++) {
+      score1 = await page.$eval('#hud-score', (el) => parseInt(el.textContent, 10));
+      await new Promise((r) => setTimeout(r, 400));
+      const stillActive = (await page.evaluate(() => window.__rr.machine)) === 'active';
+      score2 = await page.$eval('#hud-score', (el) => parseInt(el.textContent, 10));
+      scoreOk = stillActive && score2 > score1;
+    }
+    check('score DOM updates during run', scoreOk, `${score1} -> ${score2}`);
 
     // keyboard inputs: turn + jump (accepted without page errors)
     await page.keyboard.press('ArrowLeft');
@@ -215,7 +256,7 @@ async function browserChecks() {
       check('canvas rendered non-trivial pixels', shot.length > 4000, `png bytes ${shot.length}`);
     }
 
-    // pause / resume (re-enter an active run if the first one already ended)
+    // pause / resume (the survival driver keeps the run alive; it idles while paused)
     let machine = await page.evaluate(() => window.__rr && window.__rr.machine);
     if (machine !== 'active') {
       await page.click('#btn-retry').catch(() => {});
@@ -225,7 +266,7 @@ async function browserChecks() {
     await new Promise((r) => setTimeout(r, 300));
     const paused = await page.$eval('#screen-pause', (el) => el.classList.contains('active'));
     check('Esc pauses', paused);
-    await page.click('#btn-resume');
+    await page.click('#btn-resume').catch(() => {});
     await new Promise((r) => setTimeout(r, 400));
     const resumed = await page.$eval('#hud', (el) => el.classList.contains('active'));
     const resumeState = await page.evaluate(() => window.__rr && `${window.__rr.machine}/${window.__rr.reason}`);
@@ -234,6 +275,7 @@ async function browserChecks() {
     const fatal = errors.filter((e) => !/favicon|Autoplay|AudioContext|WebGL.*fallback|GroupMarkerNotSet/i.test(e));
     check('no page console errors', fatal.length === 0, fatal.slice(0, 3).join(' | '));
   } finally {
+    stopSurvivalDriver();
     await browser.close();
   }
 }
