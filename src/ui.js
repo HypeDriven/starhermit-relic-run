@@ -254,26 +254,31 @@ export function createUI(handlers) {
 
   ui.renderFriends = (profile, online, board) => {
     $('friends-status').textContent = online
-      ? 'Connected to the lodge server - showing live board.'
-      : 'Offline - showing locally saved comparison data.';
+      ? 'Connected - live leaderboard below your personal records.'
+      : 'Offline - showing locally saved records.';
     const list = $('friends-list');
     list.textContent = '';
-    const mock = [
-      { name: 'You', score: bestTotal(profile) },
-      { name: 'Sable Fox', score: Math.max(120, Math.floor(bestTotal(profile) * 1.2)) },
-      { name: 'Moth Archivist', score: Math.max(80, Math.floor(bestTotal(profile) * 0.8)) },
-      { name: 'Wren', score: Math.max(40, Math.floor(bestTotal(profile) * 0.5)) },
-    ].sort((a, b) => b.score - a.score);
-    for (const f of mock) list.append(scoreRow(f.name, f.score));
+    // local records only: this profile's bests, no fabricated rivals
+    const locals = Object.entries(profile.bestScores)
+      .map(([k, v]) => ({ name: k, score: v.total }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8);
+    if (!locals.length) {
+      const item = document.createElement('div');
+      item.className = 'item';
+      item.innerHTML = '<div class="muted">No personal records yet. Finish a ranked run to set one.</div>';
+      list.append(item);
+    }
+    for (const r of locals) list.append(scoreRow(r.name, r.score));
     const bl = $('board-list');
     bl.textContent = '';
     if (board && board.entries && board.entries.length) {
-      // player names come from the server: build with text nodes, never innerHTML
+      // display names come from the platform profile helper: text nodes, never innerHTML
       for (const e of board.entries.slice(0, 20)) bl.append(scoreRow(e.player, e.score));
     } else {
       const item = document.createElement('div');
       item.className = 'item';
-      item.innerHTML = '<div class="muted">No board data yet. Finish a ranked run while online to post a score.</div>';
+      item.innerHTML = '<div class="muted">No live board data. Personal bests stay in your profile and cloud save.</div>';
       bl.append(item);
     }
   };
@@ -307,6 +312,9 @@ export function createUI(handlers) {
 
   ui.setAwaySummary = (txt) => { $('away-summary').textContent = txt || ''; };
   ui.setNet = (online) => { $('sb-net').textContent = online ? 'online' : 'offline'; };
+  ui.setName = (t) => { $('sb-name').textContent = t || ''; };
+  const SYNC_LABELS = { synced: 'progress synced', saving: 'saving…', offline: 'local progress' };
+  ui.setSync = (s) => { $('sb-sync').textContent = SYNC_LABELS[s] || ''; };
   ui.setModeLabel = (t) => { $('sb-mode').textContent = t || ''; };
   ui.setClock = (t) => { $('sb-clock').textContent = t || ''; };
   ui.setCountdown = (t) => {
@@ -373,12 +381,6 @@ function scoreRow(name, score) {
   s.textContent = String(score);
   item.append(n, s);
   return item;
-}
-
-function bestTotal(profile) {
-  let best = 0;
-  for (const k of Object.keys(profile.bestScores)) best = Math.max(best, profile.bestScores[k].total || 0);
-  return best;
 }
 
 // --- settings binding ---------------------------------------------------------------

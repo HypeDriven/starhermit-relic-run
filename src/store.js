@@ -53,13 +53,18 @@ function writeRaw(key, data) {
   }
 }
 
-export function loadProfile() {
-  const d = readRaw('profile');
-  if (!d) return JSON.parse(JSON.stringify(DEFAULT_DATA));
-  // merge with defaults so new fields appear on older saves
+// Merge any profile-shaped doc (localStorage or cloud-loaded) with defaults
+// so new fields appear on older saves.
+export function normalizeProfile(d) {
+  if (!d || typeof d !== 'object') return JSON.parse(JSON.stringify(DEFAULT_DATA));
   const merged = JSON.parse(JSON.stringify(DEFAULT_DATA));
   deepMerge(merged, d);
+  merged.version = VERSION;
   return merged;
+}
+
+export function loadProfile() {
+  return normalizeProfile(readRaw('profile'));
 }
 
 export function saveProfile(profile) {

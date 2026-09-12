@@ -52,7 +52,7 @@ const ui = createUI({
   renderProfile: () => ui.renderProfile(app.profile),
   resetTutorials: () => {
     app.profile.tutorials = {};
-    Store.saveProfile(app.profile);
+    persistProfile();
     ui.renderLearn(app.profile, startLesson);
     ui.toast('Lessons reset. Tutorials will play again.');
   },
@@ -60,6 +60,14 @@ const ui = createUI({
 
 async function boot() {
   setMachine('boot', 'init');
+  // hosted: pull cloud progress first so the UI binds to the merged profile
+  if (Platform.hasIdentity()) {
+    const remote = await Platform.cloudLoad();
+    if (remote) {
+      app.profile = Store.normalizeProfile(remote);
+      Store.saveProfile(app.profile);
+    }
+  }
   bindSettings(app.profile.settings, onSettingsChanged);
   applyAudioSettings();
   ui.renderJourney(app.profile, (st) => startRun(stageRunConfig(st)));
@@ -90,6 +98,14 @@ async function boot() {
 
   const online = await Platform.probeServer();
   ui.setNet(online);
+  if (Platform.hasIdentity()) {
+    Platform.onSyncStatus(ui.setSync);
+    Platform.fetchNickname()
+      .then((name) => { if (name) ui.setName(name); })
+      .catch(() => {});
+  } else {
+    ui.setSync('offline');
+  }
   setMachine('title', 'boot-complete');
   setMachine('profile-ready', 'profile-loaded');
   ui.resetRail();
@@ -100,6 +116,11 @@ async function boot() {
 }
 
 // left-rail "Progress" copy: run context while playing, profile totals at rest.
+function persistProfile() {
+  Store.saveProfile(app.profile);
+  Platform.scheduleCloudSave(app.profile); // no-op unless hosted
+}
+
 function idleProgressText() {
   const done = Object.values(app.profile.journey.completed).filter((r) => r.finished).length;
   return `${done} of ${Content.STAGES.length} stages finished · ${app.profile.totals.runs} runs · ${app.profile.totals.fragments} fragments.`;
@@ -449,13 +470,12 @@ function onTerminal(terminal) {
   const s = sess.state;
   const run = app.run;
 
-  // progress + achievements
+  // progress + achievements (local by design; unlocks ride the cloud-saved doc)
   const earned = [];
   const grant = (key) => {
     if (Store.unlockAchievement(app.profile, key)) {
       const meta = Store.ACHIEVEMENTS.find((a) => a.id === key);
       earned.push(meta);
-      Platform.unlockAchievementRemote(key).catch(() => {});
     }
   };
   app.profile.totals.runs++;
@@ -498,9 +518,10 @@ function onTerminal(terminal) {
     progress = terminal === 'finished' ? 'Constraint held. Well done.' : 'The course won this time.';
   }
 
-  Store.saveProfile(app.profile);
+  persistProfile();
 
-  // ranked submission (validated server-side by replay)
+  // ranked submission (validated server-side by replay, own dev server only;
+  // hosted leaderboards are read-only for clients)
   if (run.ranked) {
     const env = Session.replayEnvelope(sess);
     Platform.submitScore({
@@ -544,7 +565,7 @@ function assistsUsed() {
 
 // --- settings ------------------------------------------------------------------------------
 function onSettingsChanged(settings) {
-  Store.saveProfile(app.profile);
+  persistProfile();
   applyAudioSettings();
   if (app.renderer) {
     Render.setQuality(app.renderer, settings.graphics.quality);
