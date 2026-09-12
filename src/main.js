@@ -625,6 +625,9 @@ document.addEventListener('keydown', (e) => {
   let startX = 0, startY = 0, startT = 0, pid = null;
   el.addEventListener('pointerdown', (e) => {
     if (app.machine !== 'active') return;
+    // Only the canvas is a gesture surface: presses on HUD/tray controls (and
+    // any other interactive descendant) are theirs alone, never a jump/swipe.
+    if (e.target !== el && e.target.closest('button, a, input, select, textarea, [role="button"], #hud, #tray, .tray')) return;
     pid = e.pointerId;
     startX = e.clientX; startY = e.clientY; startT = performance.now();
     el.setPointerCapture(pid);

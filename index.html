@@ -66,9 +66,10 @@
 
   .screen.menu {
     position: absolute; inset: 0; flex-direction: column; align-items: center;
-    justify-content: center; gap: 12px; background: rgba(10, 18, 13, 0.92);
+    justify-content: safe center; gap: 12px; background: rgba(10, 18, 13, 0.92);
     padding: 24px; overflow-y: auto; z-index: 10; text-align: center;
   }
+  .screen.menu > * { flex-shrink: 0; } /* overflowing menus scroll from the heading */
   .screen.menu .card {
     background: var(--panel); border: 1px solid #2a3c30; border-radius: 14px;
     padding: 20px; max-width: 640px; width: min(94vw, 640px); text-align: left;
