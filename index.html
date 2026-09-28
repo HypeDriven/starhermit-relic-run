@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Relic Run</title>
 <script type="importmap">
-{ "imports": { "three": "./vendor/three.module.js" } }
+{ "imports": { "three": "./vendor/three.module.js", "three/addons/": "./vendor/addons/" } }
 </script>
 <style>
   :root {
@@ -72,7 +72,7 @@
   .screen.menu > * { flex-shrink: 0; } /* overflowing menus scroll from the heading */
   .screen.menu .card {
     background: var(--panel); border: 1px solid #2a3c30; border-radius: 14px;
-    padding: 20px; max-width: 640px; width: min(94vw, 640px); text-align: left;
+    padding: 20px; max-width: 640px; width: min(94vw, 640px, 100%); text-align: left;
   }
   .menu-buttons { display: flex; flex-direction: column; gap: 10px; width: min(94vw, 340px); }
   #rail-actions { width: 100%; }
@@ -127,6 +127,19 @@
 
   .settings-grid { display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; align-items: center; text-align: left; }
   .settings-grid input[type=range] { width: 100%; }
+  .settings-grid select { width: 100%; min-height: 40px; background: var(--panel-2); color: var(--ink); border: 1px solid #3a4f41; border-radius: 8px; padding: 4px 8px; }
+  .settings-grid + .settings-grid { margin-top: 10px; }
+  .gfx-range { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .gfx-range input { flex: 1; min-width: 0; }
+  .gfx-range output { min-width: 4.5ch; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .gfx-summary { font-size: 0.85rem; overflow-wrap: anywhere; margin: 10px 0 2px; }
+  .gfx-note { font-size: 0.85rem; color: var(--danger); margin: 4px 0; }
+  #gfx-panel .settings-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }
+  @media (max-width: 560px) {
+    #gfx-panel .settings-grid.gfx-stack { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+    #gfx-panel .settings-grid.gfx-stack label:not(:first-child) { margin-top: 8px; }
+  }
+  #fps-meter { font-variant-numeric: tabular-nums; }
   fieldset { border: 1px solid #2a3c30; border-radius: 10px; margin: 8px 0; }
   legend { padding: 0 6px; color: var(--muted); }
 
@@ -175,6 +188,7 @@
     <strong>Relic Run</strong>
     <span id="sb-name" class="muted"></span>
     <span id="sb-mode" class="muted"></span>
+    <span id="fps-meter" class="muted" aria-hidden="true" hidden></span>
     <span class="spacer"></span>
     <span id="sb-sync" class="muted"></span>
     <span id="sb-net" class="muted">offline</span>
@@ -346,11 +360,20 @@
             <label for="set-ambience">Ambience</label><input type="range" id="set-ambience" min="0" max="1" step="0.05">
             <label for="set-muted">Mute all</label><input type="checkbox" id="set-muted">
           </div></fieldset>
-          <fieldset><legend>Graphics</legend><div class="settings-grid">
-            <label for="set-quality">Quality tier</label>
-            <select id="set-quality"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select>
+          <fieldset id="gfx-panel"><legend id="gfx-legend">Graphics</legend><div class="settings-grid gfx-stack">
+            <label for="gfx-preset" id="gfx-preset-label">Quality</label><select id="gfx-preset" data-gfx="preset"></select>
+            <label for="gfx-scale" id="gfx-scale-label">Render scale</label>
+            <div class="gfx-range"><input type="range" id="gfx-scale" data-gfx="render_scale" min="50" max="200" step="5" value="100"><output id="gfx-scale-val" for="gfx-scale">100%</output></div>
+          </div>
+          <div class="settings-grid gfx-stack" id="gfx-cats"></div>
+          <div class="settings-grid">
+            <label for="gfx-adaptive" id="gfx-adaptive-label">Adaptive resolution</label><input type="checkbox" id="gfx-adaptive" data-gfx="adaptive">
+            <label for="gfx-fps" id="gfx-fps-label">Show frame rate</label><input type="checkbox" id="gfx-fps" data-gfx="show_fps">
             <label for="set-motion">Reduced motion</label><input type="checkbox" id="set-motion">
-          </div></fieldset>
+          </div>
+          <p id="gfx-summary" class="muted gfx-summary" aria-live="polite"></p>
+          <p id="gfx-note" class="gfx-note" role="status" hidden></p>
+          </fieldset>
           <fieldset><legend>Controls</legend><div class="settings-grid">
             <label for="set-lefthand">Left-handed layout</label><input type="checkbox" id="set-lefthand">
             <label for="set-hold">Hold to slide (vs toggle)</label><input type="checkbox" id="set-hold">

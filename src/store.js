@@ -8,7 +8,8 @@ const VERSION = 1;
 
 export const DEFAULT_SETTINGS = {
   audio: { music: 0.7, effects: 0.8, ambience: 0.5, master: 1.0, muted: false },
-  graphics: { quality: 'medium', reducedMotion: false },
+  // gfx: the graphics quality model (see gfx.js); category overrides are added as keys
+  graphics: { reducedMotion: false, gfx: { preset: 'auto', render_scale: 1, adaptive: true, show_fps: false } },
   controls: { leftHanded: false, holdToSlide: false, haptics: true },
   accessibility: {
     colorblindPalette: false, highContrast: false, largeText: false,

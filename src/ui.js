@@ -391,7 +391,6 @@ export function bindSettings(settings, onChange) {
     ['set-effects', () => settings.audio.effects, (v) => { settings.audio.effects = +v; }, 'range'],
     ['set-ambience', () => settings.audio.ambience, (v) => { settings.audio.ambience = +v; }, 'range'],
     ['set-muted', () => settings.audio.muted, (v) => { settings.audio.muted = !!v; }, 'check'],
-    ['set-quality', () => settings.graphics.quality, (v) => { settings.graphics.quality = v; }, 'select'],
     ['set-motion', () => settings.accessibility.reducedMotion, (v) => { settings.accessibility.reducedMotion = !!v; settings.graphics.reducedMotion = !!v; }, 'check'],
     ['set-lefthand', () => settings.controls.leftHanded, (v) => { settings.controls.leftHanded = !!v; }, 'check'],
     ['set-hold', () => settings.controls.holdToSlide, (v) => { settings.controls.holdToSlide = !!v; }, 'check'],

@@ -50,7 +50,7 @@ async function main() {
       check(`GET ${ref}`, res.status === 200, res.headers.get('content-type') || '');
     }
     // module graph: fetch all /src/*.js and vendored three
-    for (const f of ['rules', 'session', 'content', 'render', 'audio', 'ui', 'store', 'platform', 'main']) {
+    for (const f of ['rules', 'session', 'content', 'render', 'audio', 'ui', 'store', 'platform', 'main', 'gfx', 'gfx-ui']) {
       const res = await fetch(`${BASE}/src/${f}.js`);
       check(`GET /src/${f}.js`, res.status === 200 && (res.headers.get('content-type') || '').includes('javascript'));
     }
@@ -138,6 +138,7 @@ async function main() {
 
     // --- browser ---
     await browserChecks();
+    await graphicsChecks();
   } finally {
     srv.kill();
     rmSync(dataDir, { recursive: true, force: true });
@@ -193,7 +194,10 @@ async function browserChecks() {
     const errors = [];
     page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
     page.on('pageerror', (e) => errors.push(String(e)));
-    await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 30000 });
+    // The title renders a live 3D backdrop, which under a software GPU can keep
+    // Chrome from ever reporting network-idle: wait for boot to finish instead.
+    await page.goto(BASE + '/', { waitUntil: 'load', timeout: 30000 });
+    await page.waitForFunction(() => window.__rr && window.__rr.machine === 'profile-ready', { timeout: 30000 });
     await new Promise((r) => setTimeout(r, 1500));
 
     const titleVisible = await page.$eval('#screen-title', (el) => el.classList.contains('active'));
@@ -276,6 +280,110 @@ async function browserChecks() {
     check('no page console errors', fatal.length === 0, fatal.slice(0, 3).join(' | '));
   } finally {
     stopSurvivalDriver();
+    await browser.close();
+  }
+}
+
+// Settings > Graphics through the real UI at desktop and mobile viewports:
+// preset switch, one override, live application, persistence across reload,
+// panel fit, and zero console errors/warnings in Low and Ultra.
+async function graphicsChecks() {
+  const browser = await puppeteer.launch({
+    executablePath: '/usr/bin/google-chrome',
+    args: ['--no-sandbox', '--headless=new', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--mute-audio'],
+  });
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  try {
+    for (const vp of [
+      { name: 'desktop', width: 1280, height: 800 },
+      { name: 'mobile', width: 390, height: 844, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
+    ]) {
+      const ctx = await browser.createBrowserContext();
+      const page = await ctx.newPage();
+      await page.setViewport(vp);
+      const noise = [];
+      page.on('console', (m) => { if (['error', 'warn', 'warning'].includes(m.type())) noise.push(m.type() + ': ' + m.text()); });
+      page.on('pageerror', (e) => noise.push(String(e)));
+      const tag = (t) => `gfx[${vp.name}] ${t}`;
+      const open = async () => {
+        if (vp.hasTouch) await page.tap('#btn-settings'); else await page.click('#btn-settings');
+        await page.waitForFunction(() => document.getElementById('screen-settings').classList.contains('active'), { timeout: 5000 });
+      };
+      const attr = () => page.evaluate(() => [document.body.dataset.gfxPreset, document.body.dataset.gfxAuto]);
+      const ready = () => page.waitForFunction(() => document.getElementById('screen-title').classList.contains('active'), { timeout: 30000 });
+      await page.goto(BASE + '/', { waitUntil: 'load', timeout: 30000 });
+      await ready();
+      await sleep(500);
+      if (await page.$eval('#compat', (el) => el.classList.contains('active'))) {
+        check(tag('WebGL unavailable - graphics checks skipped'), true);
+        await ctx.close();
+        continue;
+      }
+      await open();
+      const [auto0] = await attr();
+      check(tag('Auto resolves to Low on a software GPU'), auto0 === 'low' && (await page.$eval('#gfx-preset', (e) => e.value)) === 'auto', auto0);
+      const autoLabel = await page.$eval('#gfx-preset option[value="auto"]', (o) => o.textContent);
+      check(tag('Auto option names the detected tier'), /low/i.test(autoLabel), autoLabel);
+
+      await page.select('#gfx-preset', 'low');
+      await sleep(600);
+      const low = await attr();
+      check(tag('Low preset applied'), low[0] === 'low' && low[1] === 'false');
+      check(tag('Low renders without post-processing'), await page.evaluate(() => !window.__rr.renderer.composer));
+
+      await page.select('#gfx-preset', 'ultra');
+      await sleep(1500);
+      check(tag('Ultra preset applied with a post chain'), (await attr())[0] === 'ultra' &&
+        await page.evaluate(() => !!window.__rr.renderer.composer || window.__rr.renderer.postFailed));
+
+      await page.select('#gfx-preset', 'high');
+      await sleep(800);
+      const sumHigh = await page.$eval('#gfx-summary', (e) => e.textContent);
+      check(tag('High preset applied; summary shows cost'), (await attr())[0] === 'high' && /2048²/.test(sumHigh) && /px/.test(sumHigh), sumHigh);
+
+      await page.select('#gfx-bloom', 'off');
+      await sleep(600);
+      const bloomOff = await page.evaluate(() => window.__rr.renderer.q.bloom);
+      const sumNoBloom = await page.$eval('#gfx-summary', (e) => e.textContent);
+      check(tag('bloom override applied live'), bloomOff === 'off' && !/bloom/.test(sumNoBloom), sumNoBloom);
+
+      // keyboard: toggle the frame-rate readout with Space on the focused checkbox
+      await page.focus('#gfx-fps');
+      await page.keyboard.press('Space');
+      await sleep(300);
+      check(tag('frame-rate readout toggled by keyboard'), await page.$eval('#fps-meter', (e) => !e.hidden));
+
+      // panel fits: no horizontal overflow, every control inside the viewport
+      const fit = await page.evaluate(() => {
+        const scr = document.getElementById('screen-settings');
+        const bad = [...document.querySelectorAll('#gfx-panel select, #gfx-panel input')]
+          .filter((el) => { const r = el.getBoundingClientRect(); return r.left < 0 || r.right > window.innerWidth + 0.5; })
+          .map((el) => el.id);
+        return { overflow: scr.scrollWidth > scr.clientWidth + 1, bad };
+      });
+      check(tag('Graphics panel fits the viewport'), !fit.overflow && fit.bad.length === 0, JSON.stringify(fit));
+
+      await page.reload({ waitUntil: 'load' });
+      await ready();
+      await sleep(500);
+      await open();
+      const persisted = await page.evaluate(() => ({
+        preset: document.getElementById('gfx-preset').value,
+        bloom: document.getElementById('gfx-bloom').value,
+        attr: document.body.dataset.gfxPreset,
+        fps: !document.getElementById('fps-meter').hidden,
+      }));
+      check(tag('settings survive reload'), persisted.preset === 'high' && persisted.bloom === 'off' && persisted.attr === 'high' && persisted.fps,
+        JSON.stringify(persisted));
+
+      await page.select('#gfx-preset', 'balanced');
+      await sleep(400);
+      check(tag('choosing a preset clears overrides'), (await page.$eval('#gfx-bloom', (e) => e.value)) === '');
+
+      check(tag('no console errors or warnings'), noise.length === 0, noise.slice(0, 3).join(' | '));
+      await ctx.close();
+    }
+  } finally {
     await browser.close();
   }
 }

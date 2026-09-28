@@ -8,6 +8,7 @@ import * as Audio from './audio.js';
 import * as Store from './store.js';
 import * as Platform from './platform.js';
 import { createUI, bindSettings } from './ui.js';
+import { bindGraphics } from './gfx-ui.js';
 
 const TICK_MS = 1000 / TICKS_PER_SECOND;
 
@@ -80,15 +81,17 @@ async function boot() {
   const canvas = document.getElementById('game');
   try {
     app.renderer = Render.createRenderer(canvas, {
-      quality: app.profile.settings.graphics.quality,
+      gfx: app.profile.settings.graphics.gfx,
       reducedMotion: app.profile.settings.accessibility.reducedMotion,
       colorblind: app.profile.settings.accessibility.colorblindPalette,
     });
+    Render.setGraphics(app.renderer, app.profile.settings.graphics.gfx);
     Render.resize(app.renderer, canvas.clientWidth || 640, canvas.clientHeight || 480);
   } catch (e) {
     app.webgl = false;
     ui.showCompat(true);
   }
+  bindGraphics(app.profile.settings, onSettingsChanged, () => (app.renderer ? Render.graphicsInfo(app.renderer) : null));
 
   // idle backdrop scene so the title isn't a void
   if (app.webgl) {
@@ -423,6 +426,8 @@ function loop(ts) {
   if (app.webgl && app.renderer && !document.hidden) {
     if (app.sess) {
       Render.updateFrame(app.renderer, app.sess.state, 0, dtMs / 1000);
+    } else {
+      Render.updateIdle(app.renderer, dtMs / 1000);
     }
     Render.render(app.renderer);
   }
@@ -568,8 +573,8 @@ function onSettingsChanged(settings) {
   persistProfile();
   applyAudioSettings();
   if (app.renderer) {
-    Render.setQuality(app.renderer, settings.graphics.quality);
     Render.setReducedMotion(app.renderer, settings.accessibility.reducedMotion);
+    Render.setGraphics(app.renderer, settings.graphics.gfx);
     Render.setColorblind(app.renderer, settings.accessibility.colorblindPalette);
   }
 }

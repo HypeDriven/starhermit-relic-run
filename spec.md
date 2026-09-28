@@ -153,6 +153,10 @@ Follow the skill pack's acceptance gate: deterministic seeds, debug views for co
 - Avoid runtime shader compilation during active play by prewarming required variants. Avoid per-frame allocations in simulation/render loops.
 - Quality tiers independently control shadows, environment detail, particles, post effects, antialiasing, and render scale; they never alter rules or visibility of hazards.
 
+### Graphics
+
+**Graphics.** The renderer uses ACES filmic tone mapping with sRGB output, a hemisphere sky fill and a warm key light whose PCF shadow box follows the runner, fitted to the stretch of track ahead and snapped to whole texels so shadows do not shimmer. The title screen shows a slow glide along the course behind the menu (static under reduced motion). Optional effects: sun shadows; GTAO contact darkening; bloom limited to emissive highlights (relics, the runner's lantern, fork markers, fireflies; threshold 0.9); a colour grade (gentle S-curve, slight saturation, warm highlights) with vignette; FXAA/SMAA/MSAA; foliage density (vegetation count and pillar spacing); surface detail (procedural stone-tile, block and moss textures with bump, per-instance colour variation, flat-shaded foliage, a gradient sky dome with horizon haze matched to the fog, RoomEnvironment image-based lighting, clearcoat relics that spin and bob, pulsing fork markers, and a runner with satchel, glowing lantern and stride bob); GPU-animated fireflies and pollen; and wind sway on foliage. Ambient motion stops under the reduced-motion setting or `prefers-reduced-motion`. Effects never change rules, hazards or their visibility. Settings > **Graphics** offers a quality preset (Auto, chosen from the detected GPU: software renderers get Low, discrete GPUs and Apple M get High, others Balanced, and touch devices are capped at Balanced; Low; Balanced; High; Ultra), a render scale (50–200% of the preset's, on top of a device-pixel-ratio cap of 1 / 1.5 / 2 / 2), a per-effect override for each of shadows, ambient occlusion, bloom, colour grade, anti-aliasing, foliage density, surface detail, fireflies & pollen and wind sway ("From preset (…)" by default; choosing a preset clears overrides), adaptive resolution (averages 90 frames and steps the scale down by 0.1 to 60% when frames are slower than 26 ms, back up by 0.05 when faster than 14 ms), a frame-rate readout in the status bar, and a summary line with the GPU name, cost and pixel size. Changes apply immediately without reload (shadow maps, post chain, pixel ratio; foliage and detail rebuild the scene) and are saved in the profile settings (`settings.graphics.gfx`), so they sync with cloud saves. Low renders straight to the canvas without post-processing; if the post chain cannot be built the game renders without it and the panel says so. The panel's strings are localized (en-US, en-GB, es-419, es-ES, de-DE, fr-FR, fr-CA, pt-BR, it-IT) from the browser language. The body carries `data-gfx-preset` with the resolved preset.
+
 ## 5. Technical architecture
 
 ### Client modules
@@ -161,6 +165,9 @@ Follow the skill pack's acceptance gate: deterministic seeds, debug views for co
 - `rules`: pure deterministic state transitions, legality, scoring, seeded random stream.
 - `session`: local or hosted commands, snapshots, prediction policy, reconnect, replay.
 - `render`: Three.js scene graph, semantic entity views, camera, lighting, VFX, quality.
+- `gfx` (`src/gfx.js`): pure graphics quality model — presets, per-effect categories, GPU detection, `resolve()`, `describe()`.
+- `gfx-ui` (`src/gfx-ui.js`): the Settings > Graphics panel and its localized strings.
+- `vendor/addons/`: three.js r185 post-processing passes, shaders and RoomEnvironment, matching the vendored core (import map `three/addons/`).
 - `ui`: responsive DOM shell, focus, localization, settings, overlays, accessibility mirror.
 - `audio`: buses, event mapping, focus/background behavior, decode and memory policy.
 - `content`: versioned levels, themes, tutorials, validation metadata.
