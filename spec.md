@@ -194,22 +194,23 @@ No module may mutate rules state except through a validated command. Rendering c
 
 ### Packaging and launch
 - Ship a browser distribution with `starhermit.txt` at its root, `name=Relic Run`, and `launch=index.html`. Keep source files, secrets, design documents, and source maps outside the uploaded distribution.
-- Read the game scope from the short-lived launch token rather than hard-coding a slug. Use same-origin `/api` and `/ws` routes when hosted. Re-mint the launch token via `POST /api/v1/games/{slug}/launch-token` every 45 minutes; never persist access or launch tokens in local storage.
-- Synchronize countdowns and daily boundaries with `GET /api/v1/time` using round-trip-adjusted offset. Treat rate limits and structured `{"error":"..."}` responses as recoverable UI states.
+- All platform access goes through the canonical StarHermit SDK (`starhermit-sdk.js`, an unedited copy of `tools/starhermit-sdk.js`, loaded before the modules) wrapped by `src/platform.js`. `StarHermit.init()` runs when the adapter loads, before anything reads the URL: it takes the launch token from `#game_token=` or `#access_token=`, strips it, derives the slug from the `game_scope` claim and renews the token. If renewal is refused the game keeps playing locally, the status bar drops to local progress and sign-in is offered again.
+- On `*.starhermit.com` without a token the title shows **Sign in with StarHermit**; it is hidden when signed in and when running locally. Standalone play makes no network request at all (no platform calls, no own-server `/api` or `/ws` calls): the device clock drives the UTC daily and records stay local.
 
 ### Identity, profile, presence, and preferences
-- Support guest practice locally, then offer account sign-in for durable progress. Use the profile nickname and avatar only where identity is useful and honor profile privacy; the platform has no per-game presence endpoints, so the game sends no presence data.
-- Store accessibility, audio, graphics tier, tutorial completion, camera preference, and rules options through per-game settings. Declare desktop action bindings and read player overrides; touch mappings remain responsive UI controls.
-- Cloud-save progression as a versioned, checksummed document. Resolve conflicts by preserving both snapshots and asking the player when neither is a strict descendant. Never place credentials or private chat in saves.
+- The status bar shows the player's profile nickname (`StarHermit.profile()`, "Player <id>" fallback). The platform has no per-game presence endpoints, so the game sends no presence data.
+- The settings groups (audio, graphics, controls, accessibility, camera) mirror to the per-game settings KV: applied from `getSettings()` at start (platform wins over local values) and patched (changed groups only, debounced) on every change.
+- Keyboard actions are declared as `control.*` lines in `starhermit.txt`; keydown is routed by `event.code` through `StarHermit.loadBindings()`, and How to play lists the effective keys. Touch swipes and gamepad stay responsive game controls.
+- Progress is cloud-saved as the checksummed profile document in the `game:<slug>` slot: `loadJSON()` remote-first at boot (the remote copy replaces the local one; an empty slot is seeded from the local copy), `saveJSON()` debounced at every checkpoint, `flushSave(true)` on `pagehide`/hide. localStorage stays the offline cache. Never place credentials or private chat in saves.
 
 ### Discovery, activity, and social layer
 - Playtime/activity reporting is host-owned; the game sends no activity start/end calls. Surface entitlement or catalog state only in host-owned chrome; the game itself must remain playable without promotional interruption.
-- Provide a compact friends panel for score comparison and invitations where appropriate. Respect presence visibility and do not expose a hidden or private profile through game UI.
+- The Friends screen compares personal records with the platform board. When signed in, the title shows **Invite a friend**, which copies `StarHermit.inviteLink()` with a confirmation toast; there is no friends picker because the game has no multiplayer sessions.
 - Do not create gameplay chat or voice surfaces for the initial release; they are not relevant to the core solo loop. Friends-only leaderboard filtering and shareable challenge seeds supply the social layer without unnecessary communication permissions.
 
 ### Achievements and leaderboards
 - Declare a small static achievement set: first completion, mechanic mastery, a sustained streak, a difficult content milestone, and an accessibility-neutral long-term goal. Keys are stable, lowercase identifiers; unlocks are idempotent.
-- Provide global and friends-filtered boards for the primary metric plus a fair daily/weekly board. Include ruleset, content version, seed, assists, and duration with every submission; reject impossible or stale-version scores. On-platform, client boards are read-only (`GET /api/v1/leaderboards/{id}/entries`); submissions go only to the game's own replay-validating dev server (`server.js`).
+- Provide global and friends-filtered boards for the primary metric plus a fair daily/weekly board. Include ruleset, content version, seed, assists, and duration with every submission; reject impossible or stale-version scores. On-platform, client boards are read-only (`getGame()`/`leaderboards()` then `leaderboardEntries()`); the client never submits scores anywhere; standalone, bests stay in the local profile.
 - For globally competitive boards, validate score claims through a lightweight authoritative script using replayable input logs and deterministic seeds. If validation is unavailable, label the board casual and apply plausibility/rate checks.
 
 ### Sessions and transport
@@ -272,3 +273,7 @@ This document does **not** authorize implementation, asset production, monetizat
 ## Browser interference
 
 `browser-guard.js` (loaded from `index.html`) suppresses browser UI that gets in the way of play: the right-click context menu, the iOS long-press callout, copy / cut / paste, and page text selection. Text fields (inputs, textareas, selects, contenteditable) keep normal selection, context menu and clipboard behaviour.
+
+## Directional controls
+
+Lane 0 is screen-left and lane 2 is screen-right under the forward-looking chase camera. Arrow keys, A/D, touch arrows and swipes follow those screen directions; relics and risk-route markers use the same lane mapping. Up jumps and Down slides.

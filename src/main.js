@@ -9,6 +9,7 @@ import * as Store from './store.js';
 import * as Platform from './platform.js';
 import { createUI, bindSettings } from './ui.js';
 import { bindGraphics } from './gfx-ui.js';
+import { shText } from './sh-i18n.js';
 
 const TICK_MS = 1000 / TICKS_PER_SECOND;
 
@@ -50,6 +51,9 @@ const ui = createUI({
   openDaily: () => openDaily(),
   startDaily: () => { if (app.daily) startRun(dailyRunConfig()); },
   openFriends: () => openFriends(),
+  signIn: () => Platform.signIn(),
+  invite: () => copyInvite(),
+  bindings: () => Platform.getBindings(),
   renderProfile: () => ui.renderProfile(app.profile),
   resetTutorials: () => {
     app.profile.tutorials = {};
@@ -67,8 +71,13 @@ async function boot() {
     if (remote) {
       app.profile = Store.normalizeProfile(remote);
       Store.saveProfile(app.profile);
+    } else if (Store.hasSavedProfile()) {
+      Platform.scheduleCloudSave(app.profile); // empty slot: seed it from the local copy
     }
+    // per-player settings KV wins over local values
+    if (await Platform.loadSettings(app.profile.settings)) Store.saveProfile(app.profile);
   }
+  await Platform.loadBindings();
   bindSettings(app.profile.settings, onSettingsChanged);
   applyAudioSettings();
   ui.renderJourney(app.profile, (st) => startRun(stageRunConfig(st)));
@@ -99,8 +108,7 @@ async function boot() {
     buildScene(idle.seed, idle.genOpts, idle.theme);
   }
 
-  const online = await Platform.probeServer();
-  ui.setNet(online);
+  ui.setNet(Platform.hasIdentity());
   if (Platform.hasIdentity()) {
     Platform.onSyncStatus(ui.setSync);
     Platform.fetchNickname()
@@ -109,6 +117,11 @@ async function boot() {
   } else {
     ui.setSync('offline');
   }
+  refreshAccount();
+  Platform.onAuth((a) => {
+    if (!a.signedIn) { ui.setName(''); ui.toast(shText('signedOut')); }
+    refreshAccount();
+  });
   setMachine('title', 'boot-complete');
   setMachine('profile-ready', 'profile-loaded');
   ui.resetRail();
@@ -116,6 +129,21 @@ async function boot() {
   ui.show('title');
   ui.announce('Relic Run loaded. Press Play to choose a mode.');
   requestAnimationFrame(loop);
+}
+
+// StarHermit account chrome: sign-in when possible, invite link when signed in.
+function refreshAccount() {
+  ui.setAccount({ signedIn: Platform.hasIdentity(), canSignIn: Platform.canSignIn() });
+}
+async function copyInvite() {
+  const url = Platform.inviteLink();
+  if (!url) return;
+  try {
+    await navigator.clipboard.writeText(url);
+    ui.toast(shText('inviteCopied'));
+  } catch {
+    ui.toast(shText('inviteLink', { url }));
+  }
 }
 
 // left-rail "Progress" copy: run context while playing, profile totals at rest.
@@ -191,15 +219,11 @@ function dailyRunConfig() {
   };
 }
 
-async function openDaily() {
-  let d = null;
-  try {
-    d = await Platform.fetchDaily();
-  } catch { /* offline: compute locally */ }
-  if (!d) {
-    const local = Content.dailyContent();
-    d = { seed: local.seed, dateKey: local.dateKey, genOpts: local.genOpts, theme: local.theme };
-  }
+function openDaily() {
+  // The daily seed derives from the device clock's UTC date (same course for
+  // everyone); no server route is involved.
+  const local = Content.dailyContent();
+  const d = { seed: local.seed, dateKey: local.dateKey, genOpts: local.genOpts, theme: local.theme };
   app.daily = d;
   const best = app.profile.bestScores['daily-' + d.dateKey];
   ui.setDailyInfo(
@@ -211,8 +235,8 @@ async function openDaily() {
 
 async function openFriends() {
   let board = null;
-  try { board = await Platform.fetchLeaderboard('global'); } catch { /* offline */ }
-  ui.renderFriends(app.profile, Platform.isServerOnline(), board);
+  try { board = await Platform.fetchLeaderboard(); } catch { /* offline */ }
+  ui.renderFriends(app.profile, Platform.hasIdentity(), board);
   ui.show('friends');
 }
 
@@ -525,27 +549,8 @@ function onTerminal(terminal) {
 
   persistProfile();
 
-  // ranked submission (validated server-side by replay, own dev server only;
-  // hosted leaderboards are read-only for clients)
-  if (run.ranked) {
-    const env = Session.replayEnvelope(sess);
-    Platform.submitScore({
-      ruleset: env.schemaVersion,
-      contentVersion: env.contentVersion,
-      seed: env.seed,
-      genOpts: env.genOpts,
-      assists: assistsUsed(),
-      durationTicks: s.tick,
-      commands: env.commands,
-      scoreBreakdown: bd,
-      board: run.mode === 'daily' ? 'daily' : 'global',
-      player: 'runner-' + (app.profile.totals.runs % 1000),
-    }).then((r) => {
-      if (r && r.accepted) ui.toast('Score accepted by the lodge board.');
-    }).catch((e) => {
-      if (!e.offline) ui.toast('Score rejected: ' + e.message, true);
-    });
-  }
+  // Clients never submit scores (hosted leaderboards are read-only); bests
+  // stay in the (cloud-saved) profile.
 
   const headline = {
     finished: 'You reached the relic gate!',
@@ -563,14 +568,10 @@ function onTerminal(terminal) {
   ui.renderLearn(app.profile, startLesson);
 }
 
-function assistsUsed() {
-  const a = app.profile.settings.accessibility;
-  return { timingAssist: !!a.timingAssist, reducedMotion: !!a.reducedMotion };
-}
-
 // --- settings ------------------------------------------------------------------------------
 function onSettingsChanged(settings) {
   persistProfile();
+  Platform.mirrorSettings(app.profile.settings);
   applyAudioSettings();
   if (app.renderer) {
     Render.setReducedMotion(app.renderer, settings.accessibility.reducedMotion);
@@ -589,29 +590,27 @@ function applyAudioSettings() {
 }
 
 // --- input ----------------------------------------------------------------------------------
-const KEYMAP = {
-  ArrowLeft: 'left', KeyA: 'left',
-  ArrowRight: 'right', KeyD: 'right',
-  ArrowUp: 'jump', KeyW: 'jump', Space: 'jump',
-  ArrowDown: 'slide', KeyS: 'slide',
-};
+// Keydown is routed by KeyboardEvent.code through the player's platform bindings
+// (control.* in starhermit.txt; defaults in platform.js).
+const RUN_ACTIONS = new Set(['left', 'right', 'jump', 'slide']);
 
 document.addEventListener('keydown', (e) => {
   if (e.repeat) return;
   Audio.ensureAudio();
-  if (KEYMAP[e.code]) {
-    if (app.machine === 'active') { e.preventDefault(); command(KEYMAP[e.code]); }
+  const action = Platform.actionFor(e.code);
+  if (RUN_ACTIONS.has(action)) {
+    if (app.machine === 'active') { e.preventDefault(); command(action); }
     return;
   }
-  switch (e.code) {
-    case 'Escape':
+  switch (action) {
+    case 'pause':
       if (app.machine === 'active') pauseRun('esc');
       else if (app.machine === 'paused') resumeRun();
       else if (ui.currentScreen && ui.currentScreen !== 'title') ui.show(ui.backTarget === 'pause' && app.sess ? 'pause' : 'title');
       break;
-    case 'KeyU': practiceUndo(); break;
-    case 'KeyH': showHint(); break;
-    case 'KeyC':
+    case 'undo': practiceUndo(); break;
+    case 'hint': showHint(); break;
+    case 'camera':
       if (app.renderer && app.sess) {
         const s = app.sess.state;
         app.renderer.camPos.set(0, Render.CAMERA.height, (s.distUnits / UNITS_PER_CELL) * 2 - Render.CAMERA.back);
@@ -691,9 +690,9 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-// clock display (server-synced when online)
+// clock display (device clock)
 setInterval(() => {
-  const d = new Date(Platform.isServerOnline() ? Platform.serverNow() : Date.now());
+  const d = new Date();
   ui.setClock(d.toISOString().slice(11, 19) + ' UTC');
 }, 1000);
 

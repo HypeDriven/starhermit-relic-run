@@ -2,22 +2,32 @@
 // The canvas is never the only UI: every state change is mirrored to the DOM.
 import { THEMES, STAGES, LESSONS, CHALLENGES, PRACTICE_DIFFICULTIES } from './content.js';
 import { ACHIEVEMENTS } from './store.js';
+import { shText } from './sh-i18n.js';
 
 const $ = (id) => document.getElementById(id);
 
 const SCREENS = ['title', 'mode', 'journey', 'learn', 'practice', 'challenge', 'daily', 'pause', 'results', 'help', 'settings', 'friends', 'profile'];
 
+// Help rows: action descriptions; the keys column shows the effective bindings.
 export const KEY_MAPPINGS = [
-  { keys: 'ArrowLeft / A', action: 'Turn left / move to left lane (safe route at forks)' },
-  { keys: 'ArrowRight / D', action: 'Turn right / move to right lane (risk route at forks)' },
-  { keys: 'ArrowUp / W / Space', action: 'Jump' },
-  { keys: 'ArrowDown / S', action: 'Slide' },
-  { keys: 'Enter', action: 'Confirm' },
-  { keys: 'Escape', action: 'Pause / cancel' },
-  { keys: 'U', action: 'Undo (practice only)' },
-  { keys: 'H', action: 'Hint' },
-  { keys: 'C', action: 'Reset camera' },
+  { action: 'left', label: 'Turn left / move to left lane (safe route at forks)' },
+  { action: 'right', label: 'Turn right / move to right lane (risk route at forks)' },
+  { action: 'jump', label: 'Jump' },
+  { action: 'slide', label: 'Slide' },
+  { keys: 'Enter', label: 'Confirm' },
+  { action: 'pause', label: 'Pause / cancel' },
+  { action: 'undo', label: 'Undo (practice only)' },
+  { action: 'hint', label: 'Hint' },
+  { action: 'camera', label: 'Reset camera' },
 ];
+
+/** Readable name for a KeyboardEvent.code. */
+export function keyLabel(code) {
+  let m;
+  if ((m = /^Key([A-Z])$/.exec(code))) return m[1];
+  if ((m = /^Digit(\d)$/.exec(code))) return m[1];
+  return code;
+}
 
 export function createUI(handlers) {
   const ui = { handlers, currentScreen: 'title', backTarget: 'title' };
@@ -215,10 +225,17 @@ export function createUI(handlers) {
   ui.renderHelp = () => {
     const list = $('help-cards');
     list.textContent = '';
+    const b = handlers.bindings ? handlers.bindings() : {};
     for (const m of KEY_MAPPINGS) {
       const item = document.createElement('div');
       item.className = 'item';
-      item.innerHTML = `<div class="name">${m.keys}</div><div class="muted">${m.action}</div>`;
+      const keys = document.createElement('div');
+      keys.className = 'name';
+      keys.textContent = m.action ? (b[m.action] || []).map(keyLabel).join(' / ') : m.keys;
+      const label = document.createElement('div');
+      label.className = 'muted';
+      label.textContent = m.label;
+      item.append(keys, label);
       list.append(item);
     }
   };
@@ -311,6 +328,10 @@ export function createUI(handlers) {
   };
 
   ui.setAwaySummary = (txt) => { $('away-summary').textContent = txt || ''; };
+  ui.setAccount = ({ signedIn, canSignIn }) => {
+    $('btn-signin').hidden = signedIn || !canSignIn;
+    $('btn-invite').hidden = !signedIn;
+  };
   ui.setNet = (online) => { $('sb-net').textContent = online ? 'online' : 'offline'; };
   ui.setName = (t) => { $('sb-name').textContent = t || ''; };
   const SYNC_LABELS = { synced: 'progress synced', saving: 'saving…', offline: 'local progress' };
@@ -350,6 +371,10 @@ export function createUI(handlers) {
   $('btn-help').addEventListener('click', () => { handlers.click(); ui.backTarget = 'title'; ui.renderHelp(); ui.show('help'); });
   $('btn-settings').addEventListener('click', () => { handlers.click(); ui.backTarget = 'title'; ui.show('settings'); });
   $('btn-friends').addEventListener('click', () => { handlers.click(); handlers.openFriends(); });
+  $('btn-signin').textContent = shText('signIn');
+  $('btn-invite').textContent = shText('invite');
+  $('btn-signin').addEventListener('click', () => { handlers.click(); handlers.signIn(); });
+  $('btn-invite').addEventListener('click', () => { handlers.click(); handlers.invite(); });
   $('btn-pause-settings').addEventListener('click', () => { handlers.click(); ui.backTarget = 'pause'; ui.show('settings'); });
   $('btn-pause-help').addEventListener('click', () => { handlers.click(); ui.backTarget = 'pause'; ui.renderHelp(); ui.show('help'); });
   document.querySelectorAll('#screen-mode [data-mode]').forEach((b) => {

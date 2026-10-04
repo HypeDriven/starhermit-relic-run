@@ -15,7 +15,9 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { mulberry32, UNITS_PER_CELL, LANES } from './rules.js';
 import { detectPreset, describe, resolve, SHADOW_MAP } from './gfx.js';
 
-export const LANE_X = [-2.2, 0, 2.2];
+// The chase camera looks toward +Z, so positive world X is screen-left.
+const LANE_SPACING = 2.2;
+export const LANE_X = [LANE_SPACING, 0, -LANE_SPACING];
 const CELL_DEPTH = 2.0;
 const GROUND_Y = 0;
 
@@ -570,7 +572,7 @@ export function buildCourseScene(R, course, theme, seed) {
   // low barriers
   const lowCells = [];
   for (let i = 0; i < nCells; i++) if (cells[i].low) lowCells.push(i);
-  const barGeo = new THREE.BoxGeometry(LANE_X[2] * 2 + 2.2, 1.0, 0.4);
+  const barGeo = new THREE.BoxGeometry(LANE_SPACING * LANES, 1.0, 0.4);
   const bars = new THREE.InstancedMesh(barGeo, mats.barrier, Math.max(1, lowCells.length));
   lowCells.forEach((ci, idx) => {
     m4.makeTranslation(0, GROUND_Y + 1.1, ci * CELL_DEPTH);
@@ -636,7 +638,7 @@ export function buildCourseScene(R, course, theme, seed) {
     const span = Math.min(cells[b].branch, 12);
     for (let k = 1; k <= span && b + k < nCells; k++) {
       if (cells[b + k].gap) continue;
-      m4.makeTranslation(LANE_X[2] + 0.4, GROUND_Y + 0.03, (b + k) * CELL_DEPTH);
+      m4.makeTranslation(LANE_X[2] - 0.4, GROUND_Y + 0.03, (b + k) * CELL_DEPTH);
       strips.setMatrixAt(si++, m4);
     }
   }

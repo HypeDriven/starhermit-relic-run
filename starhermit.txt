@@ -4,3 +4,13 @@ launch=index.html
 owner=2712e04e-461b-4d23-81ae-e40b429128a8
 server=server.js
 cover=cover.jpg
+
+# Keyboard actions (KeyboardEvent.code; remappable via the platform controls API).
+control.left=ArrowLeft+KeyA | Turn / move left
+control.right=ArrowRight+KeyD | Turn / move right
+control.jump=ArrowUp+KeyW+Space | Jump
+control.slide=ArrowDown+KeyS | Slide
+control.pause=Escape | Pause / back
+control.undo=KeyU | Undo (practice)
+control.hint=KeyH | Hint
+control.camera=KeyC | Reset camera

@@ -194,6 +194,12 @@ async function browserChecks() {
     const errors = [];
     page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
     page.on('pageerror', (e) => errors.push(String(e)));
+    // Standalone (no launch token) the client must never call its own server.
+    const ownServerCalls = [];
+    page.on('request', (r) => {
+      const u = new URL(r.url());
+      if (u.origin === BASE && /^\/(api|ws)(\/|$)/.test(u.pathname)) ownServerCalls.push(u.pathname);
+    });
     // The title renders a live 3D backdrop, which under a software GPU can keep
     // Chrome from ever reporting network-idle: wait for boot to finish instead.
     await page.goto(BASE + '/', { waitUntil: 'load', timeout: 30000 });
@@ -278,6 +284,7 @@ async function browserChecks() {
 
     const fatal = errors.filter((e) => !/favicon|Autoplay|AudioContext|WebGL.*fallback|GroupMarkerNotSet/i.test(e));
     check('no page console errors', fatal.length === 0, fatal.slice(0, 3).join(' | '));
+    check('standalone load made zero same-origin /api or /ws requests', ownServerCalls.length === 0, ownServerCalls.join(', '));
   } finally {
     stopSurvivalDriver();
     await browser.close();

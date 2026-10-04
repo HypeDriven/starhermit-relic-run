@@ -68,6 +68,10 @@ export function loadProfile() {
   return normalizeProfile(readRaw('profile'));
 }
 
+export function hasSavedProfile() {
+  return readRaw('profile') != null;
+}
+
 export function saveProfile(profile) {
   const data = { ...profile, version: VERSION };
   return writeRaw('profile', data);
