@@ -259,8 +259,10 @@ async function browserChecks() {
     if (!compat) {
       // canvas region of the composited page must contain rendered scenery
       const box = await (await page.$('#game')).boundingBox();
+      // sample the centre (the track), not a fixed-size top-left corner that is all sky on big screens
+      const cw = Math.min(box.width, 400), ch = Math.min(box.height, 300);
       const shot = await page.screenshot({
-        clip: { x: box.x, y: box.y, width: Math.min(box.width, 400), height: Math.min(box.height, 300) },
+        clip: { x: box.x + (box.width - cw) / 2, y: box.y + (box.height - ch) / 2, width: cw, height: ch },
       });
       // PNG bytes: a flat single-color region compresses tiny; real scenery is bigger
       check('canvas rendered non-trivial pixels', shot.length > 4000, `png bytes ${shot.length}`);

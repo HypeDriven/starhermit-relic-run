@@ -46,7 +46,10 @@ export function createUI(handlers) {
     if (name) {
       const el = $('screen-' + name);
       const focusable = el && el.querySelector('button, [tabindex], input, select');
-      if (focusable) focusable.focus();
+      // preventScroll: on short screens the first control can be the Back button at the bottom;
+      // focusing it must not scroll the heading out of view.
+      if (focusable) focusable.focus({ preventScroll: true });
+      if (el) el.scrollTop = 0;
     }
   };
   ui.showPlay = () => {

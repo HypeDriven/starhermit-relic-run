@@ -72,9 +72,9 @@
   .screen.menu > * { flex-shrink: 0; } /* overflowing menus scroll from the heading */
   .screen.menu .card {
     background: var(--panel); border: 1px solid #2a3c30; border-radius: 14px;
-    padding: 20px; max-width: 640px; width: min(94vw, 640px, 100%); text-align: left;
+    padding: 20px; max-width: 640px; width: min(calc(94vw / var(--ui-scale, 1)), 640px, 100%); text-align: left;
   }
-  .menu-buttons { display: flex; flex-direction: column; gap: 10px; width: min(94vw, 340px); }
+  .menu-buttons { display: flex; flex-direction: column; gap: 10px; width: min(calc(94vw / var(--ui-scale, 1)), 340px, 100%); } /* 100%: never overflow a narrow card */
   #rail-actions { width: 100%; }
   #btn-play { font-size: 1.35rem; padding: 16px 22px; }
   .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
@@ -107,6 +107,7 @@
     font-size: 0.9rem; z-index: 4; max-width: 44ch; display: none;
   }
   #mirror.active { display: block; }
+  #mirror.active:empty { display: none; } /* no stray empty pill before the first hazard preview */
 
   #countdown {
     position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
@@ -122,6 +123,7 @@
     background: var(--panel-2); border-radius: 10px; padding: 10px 14px; border: 1px solid #2a3c30;
   }
   .item .name { font-weight: 600; }
+  .list .item > button { flex-shrink: 0; } /* never squeeze the action button below its label */
   .badge { font-size: 0.8rem; padding: 2px 8px; border-radius: 20px; background: #2a3c30; }
   .badge.done { background: var(--ok); color: #062; }
 
@@ -170,6 +172,10 @@
   @media (max-width: 700px) and (orientation: portrait) {
     #tray button { flex: 1; max-width: 120px; }
     #mirror { bottom: calc(120px + var(--sab)); }
+    /* stats + Pause on the first row, objective full-width below (not a 5-line sliver) */
+    #hud { flex-wrap: wrap; gap: 6px; }
+    #hud .hud-box:nth-child(2) { flex: 1; }
+    #hud-objective { order: 3; flex-basis: 100%; max-width: none; font-size: 0.85rem; padding: 6px 12px; }
   }
   /* landscape mobile: narrow status rail */
   @media (max-height: 500px) and (orientation: landscape) {
@@ -180,7 +186,11 @@
   @media (prefers-reduced-motion: reduce) {
     * { scroll-behavior: auto; }
   }
+  /* Large screens: ui-scale.js sets --ui-scale (exactly 1 up to 1600x1000). Each chrome layer
+     zooms once; the 3D canvas between the rails stays unzoomed and fills the remaining space. */
+  #statusbar, .rail, .screen.menu, #hud, #tray, #mirror, #countdown, #toast, #compat { zoom: var(--ui-scale, 1); }
 </style>
+<script src="ui-scale.js"></script>
 <script src="browser-guard.js"></script>
 <script src="starhermit-sdk.js"></script>
 </head>
@@ -269,7 +279,7 @@
         <div class="card">
           <h2 id="journey-h">Journey</h2>
           <p class="muted" id="journey-summary"></p>
-          <div class="list" id="journey-list" style="max-height:46vh;overflow-y:auto"></div>
+          <div class="list" id="journey-list" style="max-height:calc(46vh / var(--ui-scale, 1));overflow-y:auto"></div>
           <div class="row" style="margin-top:14px"><button class="secondary" data-nav="mode">Back</button></div>
         </div>
       </section>
