@@ -172,7 +172,7 @@ Follow the skill pack's acceptance gate: deterministic seeds, debug views for co
 - `ui`: responsive DOM shell, focus, localization, settings, overlays, accessibility mirror.
 - `audio`: buses, event mapping, focus/background behavior, decode and memory policy.
 - `content`: versioned levels, themes, tutorials, validation metadata.
-- `platform`: launch-token auth (fragment read + 45-min re-mint), nickname fetch, zip+base64 cloud-save slot, read-only leaderboard, retries; no presence/telemetry/activity calls.
+- `platform`: launch-token auth (fragment read + 45-min re-mint), nickname fetch, zip+base64 cloud-save slot, leaderboard read plus `submitScore` (high-score post), retries; no presence/telemetry/activity calls.
 
 No module may mutate rules state except through a validated command. Rendering consumes immutable snapshots plus interpolation data. UI state and simulation state are separate so closing a drawer cannot affect a match.
 
@@ -211,7 +211,7 @@ No module may mutate rules state except through a validated command. Rendering c
 
 ### Achievements and leaderboards
 - Declare a small static achievement set: first completion, mechanic mastery, a sustained streak, a difficult content milestone, and an accessibility-neutral long-term goal. Keys are stable, lowercase identifiers; unlocks are idempotent.
-- Provide global and friends-filtered boards for the primary metric plus a fair daily/weekly board. Include ruleset, content version, seed, assists, and duration with every submission; reject impossible or stale-version scores. On-platform, client boards are read-only (`getGame()`/`leaderboards()` then `leaderboardEntries()`); the client never submits scores anywhere; standalone, bests stay in the local profile.
+- Provide global and friends-filtered boards for the primary metric plus a fair daily/weekly board. Include ruleset, content version, seed, assists, and duration with every submission; reject impossible or stale-version scores. On-platform, the client reads the board through `getGame()`/`leaderboards()` then `leaderboardEntries()`. When signed in, every finished Journey, Daily or Challenge run (not Learn or Practice) posts its total through `StarHermit.submitScores` (a practice session whose `score-script.js` posts it to the `high-score` board: integer, higher is better, 0–1,000,000), and the results screen shows "Posting score to the leaderboard…", then "Leaderboard rank: #N" (or posted / not posted) in the nine locales (`src/sh-i18n.js`). Standalone, nothing is posted, the line stays hidden and bests stay in the local profile.
 - For globally competitive boards, validate score claims through a lightweight authoritative script using replayable input logs and deterministic seeds. If validation is unavailable, label the board casual and apply plausibility/rate checks.
 
 ### Sessions and transport
@@ -220,7 +220,7 @@ No module may mutate rules state except through a validated command. Rendering c
 - Realtime rooms, peer relay, matchmaking, backfill, and voice are intentionally not used because they add no value to this ruleset.
 
 ### Publishing and operations
-- Keep the authoritative script inside the distribution and declare it with `server=server.js`. Choose a digest-pinned container only if profiling proves the sandbox unsuitable; no initial design here requires one.
+- The platform script is `score-script.js` (declared `server=score-script.js`; canonical copy in the games repo's `tools/score-script.js`): it range-checks a run total and posts it to the `high-score` board. `server.js` is the local dev server. Choose a digest-pinned container only if profiling proves the sandbox unsuitable; no initial design here requires one.
 - Define control defaults, achievement metadata, and versioned settings before release. Publish immutable build assets, verify the launch path, maintain migration tests for saves, and expose no secret configuration to the client.
 - Capture anonymous funnel events only for start, tutorial step, round end, retry, settings change, and error category. Avoid raw text, precise personal data, and cross-title tracking.
 

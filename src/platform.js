@@ -4,7 +4,7 @@
 // The SDK renews the token, owns the cloud-save slot (game:<slug>), the
 // settings KV, controls, profiles and leaderboards. Without a token the game
 // is fully local and makes no network request (device clock, local daily,
-// local records). Clients never submit platform scores.
+// local records). Finished runs are posted with submitScore() (hosted only).
 
 const SH = () => globalThis.StarHermit || null;
 if (SH()) SH().init(); // reads + strips the launch fragment before anything else
@@ -159,8 +159,24 @@ export function actionFor(code) {
 }
 
 // --- leaderboards -----------------------------------------------------------------------
+// Post a finished run to the leaderboards (score-script.js) and read back the
+// player's rank on the high-score board: { posted, rank }. Hosted only.
+export async function submitScore(total) {
+  const sh = SH();
+  if (!hasIdentity()) return { posted: false, rank: null };
+  try {
+    const keys = await sh.submitScores({ 'high-score': total });
+    if (!(keys || []).includes('high-score')) return { posted: false, rank: null };
+    try {
+      const r = await sh.leaderboard('high-score', { pageSize: 100 });
+      const me = (r.items || []).find((e) => e.userId === sh.userId);
+      return { posted: true, rank: me ? me.rank : null };
+    } catch { return { posted: true, rank: null }; }
+  } catch { return { posted: false, rank: null }; }
+}
+
 // Read-only, hosted only: platform game record -> leaderboard entries
-// (nicknames resolved via the profile helper). Clients can never submit.
+// (nicknames resolved via the profile helper).
 // Returns null whenever live data is unavailable (callers show local records).
 export async function fetchLeaderboard() {
   const sh = SH();

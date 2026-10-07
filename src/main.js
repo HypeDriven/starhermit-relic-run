@@ -486,6 +486,20 @@ function updateHUDNow() {
 }
 
 // --- terminal / results ------------------------------------------------------------------
+// Signed in, a finished Journey, Daily or Challenge run posts its total to the
+// StarHermit high-score board and the results screen shows the player's rank.
+function postToLeaderboard(mode, total) {
+  const line = document.getElementById('results-lb');
+  if (!line) return;
+  if (!Platform.hasIdentity() || !['journey', 'daily', 'challenge'].includes(mode)) { line.hidden = true; line.textContent = ''; return; }
+  line.hidden = false;
+  line.textContent = shText('lbPosting');
+  Platform.submitScore(total).then((r) => {
+    line.textContent = !r.posted ? shText('lbNotPosted')
+      : r.rank ? shText('lbRank', { rank: r.rank }) : shText('lbPosted');
+  });
+}
+
 function onTerminal(terminal) {
   setMachine('resolving', terminal);
   Audio.stopMusic();
@@ -549,8 +563,8 @@ function onTerminal(terminal) {
 
   persistProfile();
 
-  // Clients never submit scores (hosted leaderboards are read-only); bests
-  // stay in the (cloud-saved) profile.
+  // Bests stay in the (cloud-saved) profile; hosted Journey, Daily and Challenge
+  // runs are also posted to the StarHermit high-score board (below).
 
   const headline = {
     finished: 'You reached the relic gate!',
@@ -564,6 +578,7 @@ function onTerminal(terminal) {
   ui.renderResults({ headline: `${headline} - ${bd.total} pts`, breakdown: bd, progress, achievements: earned, canNext });
   ui.show('results');
   ui.announce(`${headline}. Final score ${bd.total}.`, true);
+  postToLeaderboard(run.mode, bd.total);
   ui.renderJourney(app.profile, (st) => startRun(stageRunConfig(st)));
   ui.renderLearn(app.profile, startLesson);
 }
