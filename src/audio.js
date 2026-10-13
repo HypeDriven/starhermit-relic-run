@@ -91,7 +91,7 @@ function env(g, t0, peak, dur) {
 function tone(bus, freq, dur, type = 'sine', peak = 0.3, slideTo = 0) {
   if (!ctx) return;
   const t0 = ctx.currentTime;
-  const o = ctx.createOscillator();
+  const o = (globalThis.GameOptions ? globalThis.GameOptions.trackSource(ctx.createOscillator(), bus) : ctx.createOscillator());
   const g = ctx.createGain();
   o.type = type;
   o.frequency.setValueAtTime(freq, t0);
@@ -110,7 +110,7 @@ function noiseBurst(bus, dur, peak = 0.2, filterFreq = 1200) {
   const data = buf.getChannelData(0);
   const rng = mulberry32((musicState.seed ^ (musicState.step * 7919)) >>> 0);
   for (let i = 0; i < n; i++) data[i] = (rng() * 2 - 1) * (1 - i / n);
-  const src = ctx.createBufferSource();
+  const src = (globalThis.GameOptions ? globalThis.GameOptions.trackSource(ctx.createBufferSource(), bus) : ctx.createBufferSource());
   src.buffer = buf;
   const f = ctx.createBiquadFilter();
   f.type = 'lowpass';
@@ -163,7 +163,7 @@ function ensureSample(name) {
 function playSample(name) {
   const entry = sampleCache.get(name);
   if (!entry || entry === 'loading') return false;
-  const src = ctx.createBufferSource();
+  const src = (globalThis.GameOptions ? globalThis.GameOptions.trackSource(ctx.createBufferSource(), name) : ctx.createBufferSource());
   src.buffer = entry;
   src.connect(fxBus);
   src.start();
@@ -227,7 +227,7 @@ export function startAmbience() {
     v = v * 0.98 + (rng() * 2 - 1) * 0.02; // brown-ish noise
     data[i] = v * 3;
   }
-  const src = ctx.createBufferSource();
+  const src = (globalThis.GameOptions ? globalThis.GameOptions.trackSource(ctx.createBufferSource(), null) : ctx.createBufferSource());
   src.buffer = buf;
   src.loop = true;
   const f = ctx.createBiquadFilter();

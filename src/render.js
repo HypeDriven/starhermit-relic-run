@@ -984,14 +984,14 @@ export function render(R) {
   }
   if (R.composer) {
     try {
-      R.composer.render(dt / 1000);
+      (globalThis.GameOptions ? globalThis.GameOptions.draw(R.composer.renderer, () => R.composer.render(dt / 1000)) : R.composer.render(dt / 1000));
       return;
     } catch (e) {
       R.postFailed = true;
       R.composer = null;
     }
   }
-  R.renderer.render(R.scene, R.camera);
+  (globalThis.GameOptions ? globalThis.GameOptions.draw(R.renderer, () => R.renderer.render(R.scene, R.camera)) : R.renderer.render(R.scene, R.camera));
 }
 const tmpSize = new THREE.Vector2();
 
