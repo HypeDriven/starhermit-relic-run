@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "test": "node node_modules/vitest/vitest.mjs run",
-    "smoke": "node tests/smoke.mjs",
+    "test:e2e": "node tests/e2e.mjs",
+    "smoke": "node tests/e2e.mjs",
     "start": "node server.js"
   },
   "keywords": [],

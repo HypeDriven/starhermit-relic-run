@@ -64,6 +64,41 @@ export function normalizeProfile(d) {
   return merged;
 }
 
+/**
+ * Merge two profiles (this device and the cloud copy another device wrote)
+ * without losing progress on either side: the higher journey unlock, per
+ * stage the better score and "finished" if either finished, the better best
+ * score per board, the union of tutorials and achievements (earliest unlock),
+ * the larger run/fragment totals and the better score per daily date.
+ * Settings stay `local`'s (the platform settings KV syncs them).
+ */
+export function mergeProfiles(local, remote) {
+  const a = normalizeProfile(local);
+  const b = normalizeProfile(remote);
+  const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+  const out = JSON.parse(JSON.stringify(a));
+  out.journey.unlocked = Math.max(num(a.journey.unlocked), num(b.journey.unlocked)) || 1;
+  for (const [id, r] of Object.entries(b.journey.completed || {})) {
+    const l = out.journey.completed[id];
+    out.journey.completed[id] = l
+      ? { ...l, score: Math.max(num(l.score), num(r.score)), finished: !!(l.finished || r.finished) }
+      : r;
+  }
+  for (const [k, r] of Object.entries(b.bestScores || {})) {
+    const l = out.bestScores[k];
+    if (!l || num(r.total) > num(l.total)) out.bestScores[k] = r;
+  }
+  for (const [k, v] of Object.entries(b.tutorials || {})) if (v) out.tutorials[k] = true;
+  for (const [k, v] of Object.entries(b.achievements || {})) {
+    const l = out.achievements[k];
+    if (!l || (v && v.unlockedAt && l.unlockedAt && v.unlockedAt < l.unlockedAt)) out.achievements[k] = v;
+  }
+  out.totals.runs = Math.max(num(a.totals.runs), num(b.totals.runs));
+  out.totals.fragments = Math.max(num(a.totals.fragments), num(b.totals.fragments));
+  for (const [d, v] of Object.entries(b.totals.dailies || {})) out.totals.dailies[d] = Math.max(num(out.totals.dailies[d]), num(v));
+  return out;
+}
+
 export function loadProfile() {
   return normalizeProfile(readRaw('profile'));
 }

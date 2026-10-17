@@ -5,6 +5,10 @@
 // settings KV, controls, profiles and leaderboards. Without a token the game
 // is fully local and makes no network request (device clock, local daily,
 // local records). Finished runs are posted with submitScore() (hosted only).
+// Cloud writes after a load are conditional (ETag): when another device saved
+// first the SDK emits 'saveconflict'; the slot is reloaded, merged through
+// onConflict(merge) and saved again.
+import { T } from './lang.js';
 
 const SH = () => globalThis.StarHermit || null;
 if (SH()) SH().init(); // reads + strips the launch fragment before anything else
@@ -34,7 +38,7 @@ async function resolveNickname(userId) {
   const sh = SH();
   if (!userId || !sh) return null;
   const p = await sh.profile(userId).catch(() => null);
-  return p ? p.displayName : 'Player ' + String(userId).slice(0, 8);
+  return p ? p.displayName : T('Player {id}', { id: String(userId).slice(0, 8) });
 }
 
 // The signed-in player's display name, or null when playing locally.
@@ -66,7 +70,21 @@ function setSyncStatus(s) {
 
 if (SH()) SH().on('saved', (ok) => setSyncStatus(ok ? 'synced' : 'saving'));
 
-// Remote-preferred load: null when there is no save or hosted data is unavailable.
+let conflictMerge = null;
+/** merge(remoteDoc) → the merged doc to save, called when another device saved first. */
+export function onConflict(merge) { conflictMerge = merge; }
+if (SH()) {
+  SH().on('saveconflict', async () => {
+    const sh = SH();
+    setSyncStatus('saving');
+    const remote = await sh.loadJSON();
+    const merged = conflictMerge ? conflictMerge(remote) : null;
+    if (merged && !sh.saveConflicted()) sh.saveJSON(merged, 0);
+  });
+}
+
+// Cloud load (the caller merges it with local progress): null when there is no
+// save or hosted data is unavailable.
 export async function cloudLoad() {
   const sh = SH();
   if (!hasIdentity()) return null;

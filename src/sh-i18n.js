@@ -1,5 +1,6 @@
 // Relic Run - StarHermit platform chrome strings (sign-in, invite link, leaderboard line) in the
-// nine supported locales, picked from navigator.language.
+// nine supported locales, in the game language (src/i18n.js via ./lang.js).
+import { lang } from './lang.js';
 const BASE = {
   'en-US': {
     signIn: 'Sign in with StarHermit', invite: 'Invite a friend',
@@ -70,7 +71,7 @@ export function pickLocale(lang) {
 
 /** shText('inviteLink', { url }) in the player's locale. */
 export function shText(key, vars) {
-  const L = BASE[pickLocale(globalThis.navigator && navigator.language)];
+  const L = BASE[pickLocale(lang())];
   let s = L[key] ?? BASE['en-US'][key] ?? key;
   if (vars) for (const [k, v] of Object.entries(vars)) s = s.replace(`{${k}}`, v);
   return s;

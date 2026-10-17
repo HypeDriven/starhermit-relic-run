@@ -171,7 +171,7 @@
   }
   /* portrait mobile: bottom thumb tray emphasis */
   @media (max-width: 700px) and (orientation: portrait) {
-    #tray button { flex: 1; max-width: 120px; }
+    #tray button { flex: 1; max-width: 120px; min-width: 0; padding: 10px 4px; font-size: clamp(0.8rem, 3.6vw, 1.1rem); overflow-wrap: anywhere; }
     #mirror { bottom: calc(120px + var(--sab)); }
     /* stats + Pause on the first row, objective full-width below (not a 5-line sliver) */
     #hud { flex-wrap: wrap; gap: 6px; }
@@ -194,11 +194,14 @@
 <script src="ui-scale.js"></script>
 <script src="browser-guard.js"></script>
 <script src="starhermit-sdk.js"></script>
+<script src="sh-language.js"></script>
+<script src="src/strings.js"></script>
+<script src="src/i18n.js"></script>
 </head>
 <body>
 <div id="app">
   <div id="statusbar" role="status">
-    <strong>Relic Run</strong>
+    <strong data-i18n-skip>Relic Run</strong>
     <span id="sb-name" class="muted"></span>
     <span id="sb-mode" class="muted"></span>
     <span id="fps-meter" class="muted" aria-hidden="true" hidden></span>
@@ -224,9 +227,9 @@
       <div id="hud" aria-label="Run status">
         <div class="hud-box" id="hud-objective"></div>
         <div class="hud-box">
-          <span id="hud-score">0</span> pts &middot;
-          <span id="hud-frag">0</span> fragments &middot;
-          <span id="hud-hearts"></span> &middot;
+          <span id="hud-score">0</span> <span>pts</span> ·
+          <span id="hud-frag">0</span> <span>fragments</span> ·
+          <span id="hud-hearts"></span> ·
           <span id="hud-speed"></span>
         </div>
         <div class="hud-box"><button id="btn-pause-hud" class="secondary">Pause</button></div>
@@ -236,15 +239,15 @@
       <div id="countdown" aria-hidden="true"></div>
 
       <div id="tray" aria-label="Actions">
-        <button data-action="left" class="secondary" id="tray-left">&#9664; Left</button>
-        <button data-action="jump" class="secondary" id="tray-jump">Jump &#9650;</button>
-        <button data-action="slide" class="secondary" id="tray-slide">Slide &#9660;</button>
-        <button data-action="right" class="secondary" id="tray-right">Right &#9654;</button>
+        <button data-action="left" class="secondary" id="tray-left">◀ Left</button>
+        <button data-action="jump" class="secondary" id="tray-jump">Jump ▲</button>
+        <button data-action="slide" class="secondary" id="tray-slide">Slide ▼</button>
+        <button data-action="right" class="secondary" id="tray-right">Right ▶</button>
       </div>
 
       <!-- screens -->
       <section id="screen-title" class="screen menu" aria-labelledby="title-h">
-        <h1 id="title-h">Relic Run</h1>
+        <h1 id="title-h" data-i18n-skip>Relic Run</h1>
         <p class="muted">Run the overgrown ruins. Turn at forks, leap the gaps, slide the vines, gather the relics.</p>
         <div class="menu-buttons">
           <button id="btn-play">Play</button>
@@ -257,8 +260,8 @@
             <button id="btn-settings" class="secondary">Settings</button>
             <button id="btn-friends" class="secondary">Friends</button>
           </div>
-          <button id="btn-invite" class="secondary" hidden>Invite a friend</button>
-          <button id="btn-signin" class="secondary" hidden>Sign in with StarHermit</button>
+          <button id="btn-invite" data-i18n-skip class="secondary" hidden>Invite a friend</button>
+          <button id="btn-signin" data-i18n-skip class="secondary" hidden>Sign in with StarHermit</button>
         </div>
       </section>
 
@@ -266,11 +269,11 @@
         <div class="card">
           <h2 id="mode-h">Choose a mode</h2>
           <div class="list">
-            <div class="item"><div><div class="name">Journey</div><div class="muted">40 authored stages &middot; ~1-2 min each &middot; ranked</div></div><button data-mode="journey">Open</button></div>
-            <div class="item"><div><div class="name">Daily Challenge</div><div class="muted">One shared seed per UTC day &middot; ranked</div></div><button data-mode="daily">Open</button></div>
-            <div class="item"><div><div class="name">Learn</div><div class="muted">Four short lessons &middot; one mechanic at a time</div></div><button data-mode="learn">Open</button></div>
-            <div class="item"><div><div class="name">Practice</div><div class="muted">Selectable difficulty &middot; restart &amp; undo &middot; unranked</div></div><button data-mode="practice">Open</button></div>
-            <div class="item"><div><div class="name">Challenge</div><div class="muted">Constrained variants: move limits, speed targets &middot; ranked</div></div><button data-mode="challenge">Open</button></div>
+            <div class="item"><div><div class="name">Journey</div><div class="muted">40 authored stages · ~1-2 min each · ranked</div></div><button data-mode="journey">Open</button></div>
+            <div class="item"><div><div class="name">Daily Challenge</div><div class="muted">One shared seed per UTC day · ranked</div></div><button data-mode="daily">Open</button></div>
+            <div class="item"><div><div class="name">Learn</div><div class="muted">Four short lessons · one mechanic at a time</div></div><button data-mode="learn">Open</button></div>
+            <div class="item"><div><div class="name">Practice</div><div class="muted">Selectable difficulty · restart &amp; undo · unranked</div></div><button data-mode="practice">Open</button></div>
+            <div class="item"><div><div class="name">Challenge</div><div class="muted">Constrained variants: move limits, speed targets · ranked</div></div><button data-mode="challenge">Open</button></div>
           </div>
           <div class="row" style="margin-top:14px"><button class="secondary" data-nav="title">Back</button></div>
         </div>
@@ -376,15 +379,15 @@
             <label for="set-ambience">Ambience</label><input type="range" id="set-ambience" min="0" max="1" step="0.05">
             <label for="set-muted">Mute all</label><input type="checkbox" id="set-muted">
           </div></fieldset>
-          <fieldset id="gfx-panel"><legend id="gfx-legend">Graphics</legend><div class="settings-grid gfx-stack">
-            <label for="gfx-preset" id="gfx-preset-label">Quality</label><select id="gfx-preset" data-gfx="preset"></select>
-            <label for="gfx-scale" id="gfx-scale-label">Render scale</label>
+          <fieldset id="gfx-panel"><legend id="gfx-legend" data-i18n-skip>Graphics</legend><div class="settings-grid gfx-stack">
+            <label for="gfx-preset" id="gfx-preset-label" data-i18n-skip>Quality</label><select id="gfx-preset" data-gfx="preset"></select>
+            <label for="gfx-scale" id="gfx-scale-label" data-i18n-skip>Render scale</label>
             <div class="gfx-range"><input type="range" id="gfx-scale" data-gfx="render_scale" min="50" max="200" step="5" value="100"><output id="gfx-scale-val" for="gfx-scale">100%</output></div>
           </div>
           <div class="settings-grid gfx-stack" id="gfx-cats"></div>
           <div class="settings-grid">
-            <label for="gfx-adaptive" id="gfx-adaptive-label">Adaptive resolution</label><input type="checkbox" id="gfx-adaptive" data-gfx="adaptive">
-            <label for="gfx-fps" id="gfx-fps-label">Show frame rate</label><input type="checkbox" id="gfx-fps" data-gfx="show_fps">
+            <label for="gfx-adaptive" id="gfx-adaptive-label" data-i18n-skip>Adaptive resolution</label><input type="checkbox" id="gfx-adaptive" data-gfx="adaptive">
+            <label for="gfx-fps" id="gfx-fps-label" data-i18n-skip>Show frame rate</label><input type="checkbox" id="gfx-fps" data-gfx="show_fps">
             <label for="set-motion">Reduced motion</label><input type="checkbox" id="set-motion">
           </div>
           <p id="gfx-summary" class="muted gfx-summary" aria-live="polite"></p>

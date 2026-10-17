@@ -1,4 +1,4 @@
-// Relic Run - end-to-end smoke test (plain node script, not vitest).
+// Relic Run - end-to-end test (plain node script, not vitest; npm run test:e2e).
 // Starts server.js on a test port, checks static resources + API, then drives
 // the real page in headless Chrome and verifies play updates the DOM.
 import { spawn } from 'node:child_process';
@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer-core';
 
 import * as S from '../src/session.js';
+import { stubStarHermit, launchToken } from './starhermit-e2e.mjs';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const PORT = 18923;
@@ -139,6 +140,7 @@ async function main() {
     // --- browser ---
     await browserChecks();
     await graphicsChecks();
+    await languageChecks();
   } finally {
     srv.kill();
     rmSync(dataDir, { recursive: true, force: true });
@@ -389,6 +391,112 @@ async function graphicsChecks() {
       await sleep(400);
       check(tag('choosing a preset clears overrides'), (await page.$eval('#gfx-bloom', (e) => e.value)) === '');
 
+      check(tag('no console errors or warnings'), noise.length === 0, noise.slice(0, 3).join(' | '));
+      await ctx.close();
+    }
+  } finally {
+    await browser.close();
+  }
+}
+
+// Language (signed in via a stubbed StarHermit API) at desktop and mobile:
+// Automatic follows the account's preferred language (fr-CA); choosing Italian
+// mid-run in Settings re-renders the pause sheet, Settings, HUD and rails
+// without ending the run and saves ui.language; Report a problem posts a bug.
+async function languageChecks() {
+  const browser = await puppeteer.launch({
+    executablePath: '/usr/bin/google-chrome',
+    args: ['--no-sandbox', '--headless=new', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--mute-audio'],
+  });
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  try {
+    for (const vp of [
+      { name: 'desktop', width: 1280, height: 800 },
+      { name: 'mobile', width: 390, height: 844, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
+    ]) {
+      const ctx = await browser.createBrowserContext();
+      const page = await ctx.newPage();
+      await page.setViewport(vp);
+      const noise = [];
+      page.on('console', (m) => { if (['error', 'warn', 'warning'].includes(m.type()) && !/GL Driver Message|GPU stall/.test(m.text())) noise.push(m.type() + ': ' + m.text()); });
+      page.on('pageerror', (e) => noise.push(String(e)));
+      const tag = (t) => `lang[${vp.name}] ${t}`;
+      const press = (sel) => (vp.hasTouch ? page.tap(sel) : page.click(sel));
+      const text = (sel) => page.$eval(sel, (el) => el.textContent.trim());
+      const lang = () => page.evaluate(() => document.documentElement.lang);
+      const calls = await stubStarHermit(page, { preferredLanguage: 'fr-CA' });
+      try {
+        await page.goto('about:blank');
+        await page.goto(BASE + '/index.html#game_token=' + launchToken(), { waitUntil: 'load', timeout: 30000 });
+        await page.waitForFunction(() => document.documentElement.lang === 'fr-CA', { timeout: 15000 });
+        await page.waitForFunction(() => document.getElementById('screen-title').classList.contains('active'), { timeout: 30000 });
+        check(tag('Automatic resolves to the account language (fr-CA)'), (await text('#btn-play')) === 'Jouer', await text('#btn-play'));
+        if (await page.$eval('#compat', (el) => el.classList.contains('active'))) {
+          check(tag('WebGL unavailable - language run checks skipped'), true);
+          await ctx.close();
+          continue;
+        }
+        // Start a practice run in French, pause, open Settings from the pause sheet.
+        await press('#btn-play');
+        await press('#screen-mode [data-mode="practice"]');
+        await page.waitForFunction(() => document.getElementById('screen-practice').classList.contains('active'));
+        await press('#practice-list .item button');
+        await page.waitForFunction(() => window.__rr.machine === 'active', { timeout: 15000 });
+        await press('#btn-pause-hud');
+        await page.waitForFunction(() => window.__rr.machine === 'paused');
+        await press('#btn-pause-settings');
+        await page.waitForFunction(() => document.getElementById('screen-settings').classList.contains('active'));
+        const auto = await page.$eval('[data-game-language="choice"] option', (o) => o.textContent);
+        check(tag('Automatic option names the resolved language'), auto === 'Automatique — Français (Canada)', auto);
+        check(tag('exactly one language selector'), (await page.$$('[data-game-language="choice"]')).length === 1);
+        await page.$eval('[data-game-language="choice"]', (el) => el.scrollIntoView({ block: 'center' }));
+        await page.select('[data-game-language="choice"]', 'it-IT');
+        await page.waitForFunction(() => document.documentElement.lang === 'it-IT');
+        await page.waitForFunction(() => /Salvato/.test(document.querySelector('[data-game-language="status"]').textContent), { timeout: 5000 });
+        check(tag('choice saved as ui.language'), calls.settings['ui.language']?.choice === 'it-IT', JSON.stringify(calls.settings['ui.language']));
+        check(tag('Settings re-rendered'), (await text('#settings-h')) === 'Impostazioni' && (await text('#gfx-legend')) === 'Grafica');
+        check(tag('labels re-rendered'), await page.evaluate(() => [...document.querySelectorAll('#screen-settings label')].some((l) => l.textContent.trim() === 'Movimento ridotto')));
+        await page.$eval('[data-game-report="title"]', (el) => el.scrollIntoView({ block: 'center' }));
+        await page.type('[data-game-report="title"]', 'Test report');
+        await press('[data-game-report="send"]');
+        await page.waitForFunction(() => /Grazie/.test(document.querySelector('[data-game-report="status"]').textContent), { timeout: 5000 });
+        check(tag('Report a problem posted'), calls.reports?.[0]?.kind === 'bug');
+        const fit = await page.evaluate(() => {
+          const vw = document.documentElement.clientWidth;
+          return [...document.querySelectorAll('#screen-settings select, #screen-settings button, #screen-settings input')]
+            .filter((el) => { const r = el.getBoundingClientRect(); return r.width && (r.left < -1 || r.right > vw + 1); }).map((el) => el.id || el.dataset.gameLanguage || el.dataset.gameReport || el.tagName);
+        });
+        check(tag('Settings fit the viewport'), fit.length === 0, JSON.stringify(fit));
+        await page.$eval('[data-game-language="choice"]', (el) => el.scrollIntoView({ block: 'center' }));
+        await page.screenshot({ path: path.join(process.env.E2E_SHOT_DIR || tmpdir(), `relic-run-e2e-language-${vp.name}.png`) });
+        // Back to the paused run: same run, Italian pause sheet and HUD.
+        await page.$eval('#screen-settings [data-nav-back]', (el) => el.scrollIntoView({ block: 'center' }));
+        await press('#screen-settings [data-nav-back]');
+        await page.waitForFunction(() => document.getElementById('screen-pause').classList.contains('active'));
+        check(tag('pause sheet re-rendered'), (await text('#pause-h')) === 'In pausa' && (await text('#btn-resume')) === 'Riprendi');
+        check(tag('run survived the language change'), (await page.evaluate(() => window.__rr.machine)) === 'paused');
+        check(tag('HUD re-rendered'), /velocità/.test(await text('#hud-speed')) && /Raggiungi la fine/.test(await text('#hud-objective')), await text('#hud-objective'));
+        await press('#btn-resume');
+        await page.waitForFunction(() => window.__rr.machine === 'active' || window.__rr.machine === 'results', { timeout: 5000 });
+        await sleep(400);
+        await page.screenshot({ path: path.join(process.env.E2E_SHOT_DIR || tmpdir(), `relic-run-e2e-language-hud-${vp.name}.png`) });
+        // Back to Automatic (fr-CA).
+        if ((await page.evaluate(() => window.__rr.machine)) === 'active') {
+          await press('#btn-pause-hud');
+          await page.waitForFunction(() => window.__rr.machine === 'paused');
+          await press('#btn-pause-settings');
+        } else {
+          await press('#btn-results-home');
+          await press('#btn-settings');
+        }
+        await page.waitForFunction(() => document.getElementById('screen-settings').classList.contains('active'));
+        await page.$eval('[data-game-language="choice"]', (el) => el.scrollIntoView({ block: 'center' }));
+        await page.select('[data-game-language="choice"]', 'auto');
+        await page.waitForFunction(() => document.documentElement.lang === 'fr-CA');
+        check(tag('back to Automatic (fr-CA)'), calls.settings['ui.language']?.choice === 'auto' && (await lang()) === 'fr-CA' && (await text('#settings-h')) === 'Paramètres');
+      } catch (e) {
+        check(tag('language flow'), false, e.message);
+      }
       check(tag('no console errors or warnings'), noise.length === 0, noise.slice(0, 3).join(' | '));
       await ctx.close();
     }

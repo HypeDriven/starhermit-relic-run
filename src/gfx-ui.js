@@ -1,8 +1,9 @@
 // Relic Run - Settings > Graphics panel: quality preset, render scale, one
 // override per effect, adaptive resolution, frame-rate readout and a cost
-// summary. The rest of the game has no i18n system, so this panel localizes its
-// own strings from navigator.language.
+// summary. Its strings follow the game language (src/i18n.js via ./lang.js) and
+// re-render on a language change (relabel()).
 import { PRESETS, CATEGORIES, resolve, presetTier, applyPreset, describe } from './gfx.js';
+import { lang } from './lang.js';
 
 const EN = {
   graphics: 'Graphics', quality: 'Quality', auto: 'Auto (detected: {tier})', renderScale: 'Render scale',
@@ -123,16 +124,23 @@ const $ = (id) => document.getElementById(id);
  * graphicsInfo() (or null without WebGL).
  */
 export function bindGraphics(settings, onChange, getInfo) {
-  const L = STRINGS[pickLocale(globalThis.navigator && navigator.language)];
+  let L = STRINGS[pickLocale(lang())];
   if (!settings.graphics.gfx || typeof settings.graphics.gfx !== 'object') settings.graphics.gfx = { preset: 'auto' };
   const saved = () => settings.graphics.gfx;
   const detected = () => (getInfo() || {}).detected || 'low';
 
-  $('gfx-legend').textContent = L.graphics;
-  $('gfx-preset-label').textContent = L.quality;
-  $('gfx-scale-label').textContent = L.renderScale;
-  $('gfx-adaptive-label').textContent = L.adaptive;
-  $('gfx-fps-label').textContent = L.showFps;
+  function labels() {
+    $('gfx-legend').textContent = L.graphics;
+    $('gfx-preset-label').textContent = L.quality;
+    $('gfx-scale-label').textContent = L.renderScale;
+    $('gfx-adaptive-label').textContent = L.adaptive;
+    $('gfx-fps-label').textContent = L.showFps;
+    for (const cat of Object.keys(CATEGORIES)) {
+      const label = document.querySelector(`label[for="gfx-${cat}"]`);
+      if (label) label.textContent = L.cats[cat];
+    }
+  }
+  labels();
 
   const presetSel = $('gfx-preset');
   const scale = $('gfx-scale');
@@ -209,11 +217,18 @@ export function bindGraphics(settings, onChange, getInfo) {
     note.hidden = !info.postFailed;
   }
 
+  /** Language changed: relabel the panel and its options in place. */
+  function relabel() {
+    L = STRINGS[pickLocale(lang())];
+    labels();
+    refresh();
+  }
+
   refresh();
   // keep the summary (pixel size, post status) fresh while the panel is open
   setInterval(() => {
     const scr = $('screen-settings');
     if (scr && scr.classList.contains('active')) refreshSummary();
   }, 1000);
-  return { refresh };
+  return { refresh, relabel };
 }

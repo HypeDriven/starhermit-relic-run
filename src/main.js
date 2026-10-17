@@ -10,8 +10,10 @@ import * as Platform from './platform.js';
 import { createUI, bindSettings } from './ui.js';
 import { bindGraphics } from './gfx-ui.js';
 import { shText } from './sh-i18n.js';
+import { T, N, onLanguage } from './lang.js';
 
 const TICK_MS = 1000 / TICKS_PER_SECOND;
+let gfxPanel = null; // Settings > Graphics (gfx-ui.js), relabelled on a language change
 
 // --- app state -------------------------------------------------------------------
 const app = {
@@ -59,7 +61,7 @@ const ui = createUI({
     app.profile.tutorials = {};
     persistProfile();
     ui.renderLearn(app.profile, startLesson);
-    ui.toast('Lessons reset. Tutorials will play again.');
+    ui.toast(T('Lessons reset. Tutorials will play again.'));
   },
 });
 
@@ -69,11 +71,27 @@ async function boot() {
   if (Platform.hasIdentity()) {
     const remote = await Platform.cloudLoad();
     if (remote) {
-      app.profile = Store.normalizeProfile(remote);
+      // Merge the cloud copy with this device's progress (best of each side)
+      // and write the merge back when this device added anything.
+      const merged = Store.mergeProfiles(app.profile, Store.normalizeProfile(remote));
+      const grew = JSON.stringify(merged) !== JSON.stringify(Store.normalizeProfile(remote));
+      app.profile = merged;
       Store.saveProfile(app.profile);
+      if (grew) Platform.scheduleCloudSave(app.profile);
     } else if (Store.hasSavedProfile()) {
       Platform.scheduleCloudSave(app.profile); // empty slot: seed it from the local copy
     }
+    // another device saved since our load: merge its progress in, keep the run
+    Platform.onConflict((remote) => {
+      // merged in place: the settings panels keep their reference to profile.settings
+      if (remote) Object.assign(app.profile, { ...Store.mergeProfiles(app.profile, Store.normalizeProfile(remote)), settings: app.profile.settings });
+      Store.saveProfile(app.profile);
+      if (!app.sess) {
+        ui.renderJourney(app.profile, (st) => startRun(stageRunConfig(st)));
+        ui.renderLearn(app.profile, startLesson);
+      }
+      return app.profile;
+    });
     // per-player settings KV wins over local values
     if (await Platform.loadSettings(app.profile.settings)) Store.saveProfile(app.profile);
   }
@@ -100,7 +118,7 @@ async function boot() {
     app.webgl = false;
     ui.showCompat(true);
   }
-  bindGraphics(app.profile.settings, onSettingsChanged, () => (app.renderer ? Render.graphicsInfo(app.renderer) : null));
+  gfxPanel = bindGraphics(app.profile.settings, onSettingsChanged, () => (app.renderer ? Render.graphicsInfo(app.renderer) : null));
 
   // idle backdrop scene so the title isn't a void
   if (app.webgl) {
@@ -127,7 +145,7 @@ async function boot() {
   ui.resetRail();
   ui.setProgress(idleProgressText());
   ui.show('title');
-  ui.announce('Relic Run loaded. Press Play to choose a mode.');
+  ui.announce(T('Relic Run loaded. Press Play to choose a mode.'));
   requestAnimationFrame(loop);
 }
 
@@ -152,21 +170,27 @@ function persistProfile() {
   Platform.scheduleCloudSave(app.profile); // no-op unless hosted
 }
 
+// Progress lines are functions so they re-render in a new language.
 function idleProgressText() {
-  const done = Object.values(app.profile.journey.completed).filter((r) => r.finished).length;
-  return `${done} of ${Content.STAGES.length} stages finished · ${app.profile.totals.runs} runs · ${app.profile.totals.fragments} fragments.`;
+  return () => {
+    const done = Object.values(app.profile.journey.completed).filter((r) => r.finished).length;
+    return T('{done} of {total} stages finished · {runs} runs · {fragments} fragments.', { done, total: Content.STAGES.length, runs: app.profile.totals.runs, fragments: app.profile.totals.fragments });
+  };
 }
 
+const CONSTRAINT_NAMES = { 'move-limit': N('move limit'), 'speed-target': N('speed target') };
 function runProgressText(cfg) {
   if (cfg.mode === 'journey') {
-    return `Stage ${cfg.stage.index + 1} of ${Content.STAGES.length} · unlocked through stage ${app.profile.journey.unlocked}.`;
+    const vars = { n: cfg.stage.index + 1, total: Content.STAGES.length, unlocked: app.profile.journey.unlocked };
+    return () => T('Stage {n} of {total} · unlocked through stage {unlocked}.', vars);
   }
   if (cfg.mode === 'learn') {
-    return `Lesson ${Content.LESSONS.indexOf(cfg.lesson) + 1} of ${Content.LESSONS.length}.`;
+    const vars = { n: Content.LESSONS.indexOf(cfg.lesson) + 1, total: Content.LESSONS.length };
+    return () => T('Lesson {n} of {total}.', vars);
   }
-  if (cfg.mode === 'daily') return `Daily ${app.daily ? app.daily.dateKey : ''} · ranked.`;
-  if (cfg.mode === 'practice') return 'Practice · unranked · press U to undo.';
-  if (cfg.mode === 'challenge') return `Challenge · ${cfg.constraint ? cfg.constraint.type : 'ranked'}.`;
+  if (cfg.mode === 'daily') { const date = app.daily ? app.daily.dateKey : ''; return () => T('Daily {date} · ranked.', { date }); }
+  if (cfg.mode === 'practice') return () => T('Practice · unranked · press U to undo.');
+  if (cfg.mode === 'challenge') return () => T('Challenge · {type}.', { type: cfg.constraint ? T(CONSTRAINT_NAMES[cfg.constraint.type] || cfg.constraint.type) : T('ranked') });
   return '';
 }
 
@@ -187,14 +211,15 @@ const ContentPreview = {
 function stageRunConfig(st) {
   return {
     mode: 'journey', stage: st, seed: st.seed, genOpts: st.genOpts, theme: st.theme,
-    ranked: true, label: `Journey: ${st.name}`,
-    objective: `Reach the end${st.goals.fragments ? ` and collect ${st.goals.fragments} fragments` : ''}. ${st.tutorial ? 'New mechanic: ' + st.tutorial + '.' : ''}`,
+    ranked: true, label: () => T('Journey: {name}', { name: T(st.name) }),
+    objective: () => (st.goals.fragments ? T('Reach the end and collect {n} fragments.', { n: st.goals.fragments }) : T('Reach the end.')) +
+      (st.tutorial ? ' ' + T('New mechanic: {mechanic}.', { mechanic: T(st.tutorial) }) : ''),
   };
 }
 function startLesson(lesson) {
   startRun({
     mode: 'learn', lesson, seed: lesson.seed, genOpts: lesson.genOpts, theme: 'emerald-overgrowth',
-    ranked: false, label: `Lesson: ${lesson.name}`, objective: lesson.goalText,
+    ranked: false, label: () => T('Lesson: {name}', { name: T(lesson.name) }), objective: () => T(lesson.goalText),
   });
 }
 function practiceRunConfig(diff) {
@@ -202,20 +227,20 @@ function practiceRunConfig(diff) {
   const seed = (Date.now() % 0x7fffffff) >>> 0;
   return {
     mode: 'practice', difficulty: diff, seed, genOpts: d.genOpts, theme: 'moss-cistern',
-    ranked: false, label: `Practice (${d.label})`, objective: 'Reach the end. U undoes a few seconds.',
+    ranked: false, label: () => T('Practice ({level})', { level: T(d.label) }), objective: () => T('Reach the end. U undoes a few seconds.'),
   };
 }
 function challengeRunConfig(c) {
   return {
     mode: 'challenge', challenge: c, seed: c.seed, genOpts: c.genOpts, theme: c.theme,
-    ranked: true, constraint: c.constraint, label: `Challenge: ${c.name}`, objective: c.description,
+    ranked: true, constraint: c.constraint, label: () => T('Challenge: {name}', { name: T(c.name) }), objective: () => T(c.description),
   };
 }
 function dailyRunConfig() {
   const d = app.daily;
   return {
     mode: 'daily', seed: d.seed, genOpts: d.genOpts, theme: d.theme,
-    ranked: true, label: `Daily ${d.dateKey}`, objective: 'Finish the daily course. One shared seed for everyone today.',
+    ranked: true, label: () => T('Daily {date}', { date: d.dateKey }), objective: () => T('Finish the daily course. One shared seed for everyone today.'),
   };
 }
 
@@ -227,8 +252,8 @@ function openDaily() {
   app.daily = d;
   const best = app.profile.bestScores['daily-' + d.dateKey];
   ui.setDailyInfo(
-    `Seed for ${d.dateKey} (UTC). Same course for every player today. Ranked.`,
-    best ? `Your best today: ${best.total} pts.` : 'No attempt recorded today.',
+    () => T('Seed for {date} (UTC). Same course for every player today. Ranked.', { date: d.dateKey }),
+    best ? () => T('Your best today: {n} pts.', { n: best.total }) : () => T('No attempt recorded today.'),
   );
   ui.show('daily');
 }
@@ -254,8 +279,8 @@ function startRun(config) {
   ui.setHUD({ objective: config.objective, score: 0, fragments: 0, hearts: app.sess.state.hearts, maxHearts: MAX_HEARTS, speed: app.sess.state.speed });
   ui.setProgress(runProgressText(config));
   ui.showPlay();
-  ui.announce(`${config.label}. ${config.objective}`);
-  if (config.lesson) ui.toast(config.lesson.intro + ' ' + config.lesson.prompt);
+  ui.announce(T('{label}. {objective}', { label: config.label(), objective: config.objective() }));
+  if (config.lesson) ui.toast(T(config.lesson.intro) + ' ' + T(config.lesson.prompt));
   // countdown
   app.countdownLeft = 3;
   setMachine('countdown', 'run-ready');
@@ -280,7 +305,7 @@ function pauseRun(reason) {
   app.hiddenSnapshot = Session.snapshot(app.sess);
   ui.setAwaySummary('');
   ui.show('pause');
-  ui.announce('Paused.');
+  ui.announce(T('Paused.'));
   Audio.playEvent('click');
 }
 
@@ -290,11 +315,10 @@ function resumeRun() {
   if (app.hiddenSnapshot && app.hiddenAt) {
     const awaySec = Math.round((Date.now() - app.hiddenAt) / 1000);
     const sum = Session.awaySummary(app.hiddenSnapshot.state, app.sess.state);
-    const txt = awaySec >= 5
-      ? `While you were away (${awaySec}s): the run was paused - nothing moved. Score unchanged (${sum.scoreDelta >= 0 ? '+' : ''}${sum.scoreDelta}).`
-      : '';
-    ui.setAwaySummary(txt);
-    if (txt) ui.announce(txt);
+    const delta = `${sum.scoreDelta >= 0 ? '+' : ''}${sum.scoreDelta}`;
+    const away = awaySec >= 5 ? () => T('While you were away ({n}s): the run was paused - nothing moved. Score unchanged ({delta}).', { n: awaySec, delta }) : '';
+    ui.setAwaySummary(away);
+    if (away) ui.announce(away());
   }
   app.hiddenAt = 0;
   setMachine('active', 'resume');
@@ -338,7 +362,7 @@ function command(action) {
   // challenge constraint: move limit
   if (app.run && app.run.constraint && app.run.constraint.type === 'move-limit') {
     if (app.moveCount >= app.run.constraint.limit) {
-      ui.toast(`Move limit reached (${app.run.constraint.limit}). No inputs left.`, true);
+      ui.toast(T('Move limit reached ({n}). No inputs left.', { n: app.run.constraint.limit }), true);
       Audio.playEvent('invalid');
       return;
     }
@@ -361,13 +385,13 @@ function command(action) {
 
 function invalidText(reason, action) {
   switch (reason) {
-    case 'lane-edge': return 'Already at the edge lane.';
-    case 'airborne': return 'Already in the air.';
-    case 'sliding': return 'Already sliding.';
-    case 'branch-choice-required': return 'A fork is ahead - choose left (safe) or right (risk).';
-    case 'mechanic-disabled': return 'That move is not part of this stage.';
-    case 'session-over': return 'The run is over.';
-    default: return `Cannot ${action} here (${reason}).`;
+    case 'lane-edge': return T('Already at the edge lane.');
+    case 'airborne': return T('Already in the air.');
+    case 'sliding': return T('Already sliding.');
+    case 'branch-choice-required': return T('A fork is ahead - choose left (safe) or right (risk).');
+    case 'mechanic-disabled': return T('That move is not part of this stage.');
+    case 'session-over': return T('The run is over.');
+    default: return T('Cannot {action} here ({reason}).', { action: T(action), reason });
   }
 }
 
@@ -377,27 +401,27 @@ function showHint() {
   const ci = Math.floor(s.distUnits / UNITS_PER_CELL);
   const cells = s.course.cells;
   if (activeBranch(s) >= 0) {
-    ui.toast('Fork ahead: LEFT for the safe route, RIGHT for double-fragment risk route.');
+    ui.toast(T('Fork ahead: LEFT for the safe route, RIGHT for double-fragment risk route.'));
     return;
   }
   for (let i = ci + 1; i <= Math.min(ci + 5, cells.length - 1); i++) {
     const c = cells[i];
-    if (c.gap) { ui.toast(`Gap in ${i - ci} - jump (UP) just before it.`); return; }
-    if (c.low) { ui.toast(`Low barrier in ${i - ci} - slide (DOWN) under it.`); return; }
-    if (c.relicLane >= 0) { ui.toast(`Fragment in ${i - ci}, ${['left', 'center', 'right'][c.relicLane]} lane.`); return; }
+    if (c.gap) { ui.toast(T('Gap in {n} - jump (UP) just before it.', { n: i - ci })); return; }
+    if (c.low) { ui.toast(T('Low barrier in {n} - slide (DOWN) under it.', { n: i - ci })); return; }
+    if (c.relicLane >= 0) { ui.toast(T('Fragment in {n}, {lane} lane.', { n: i - ci, lane: T([N('left'), N('center'), N('right')][c.relicLane]) })); return; }
   }
-  ui.toast('Path is clear. Keep running.');
+  ui.toast(T('Path is clear. Keep running.'));
 }
 
 function practiceUndo() {
   if (!app.run || app.run.mode !== 'practice' || app.machine !== 'active') {
-    ui.toast('Undo is only available in Practice.', true);
+    ui.toast(T('Undo is only available in Practice.'), true);
     return;
   }
   const snap = app.undoRing.pop();
-  if (!snap) { ui.toast('Nothing to undo yet.', true); return; }
+  if (!snap) { ui.toast(T('Nothing to undo yet.'), true); return; }
   app.sess = Session.restore(snap);
-  ui.toast('Undid a few seconds.');
+  ui.toast(T('Undid a few seconds.'));
   Audio.playEvent('click');
   updateHUDNow();
 }
@@ -434,7 +458,7 @@ function loop(ts) {
       if (s.hearts < prevHearts) {
         Audio.playEvent('crash');
         Render.addShake(app.renderer, 0.3);
-        ui.announce(`Hit a barrier. ${s.hearts} hearts left.`, true);
+        ui.announce(T('Hit a barrier. {n} hearts left.', { n: s.hearts }), true);
       }
       if (s.terminal && !before) {
         onTerminal(s.terminal);
@@ -493,11 +517,19 @@ function postToLeaderboard(mode, total) {
   if (!line) return;
   if (!Platform.hasIdentity() || !['journey', 'daily', 'challenge'].includes(mode)) { line.hidden = true; line.textContent = ''; return; }
   line.hidden = false;
-  line.textContent = shText('lbPosting');
+  app.lbResult = { pending: true };
+  renderLeaderboardLine();
   Platform.submitScore(total).then((r) => {
-    line.textContent = !r.posted ? shText('lbNotPosted')
-      : r.rank ? shText('lbRank', { rank: r.rank }) : shText('lbPosted');
+    app.lbResult = r;
+    renderLeaderboardLine();
   });
+}
+function renderLeaderboardLine() {
+  const line = document.getElementById('results-lb');
+  const r = app.lbResult;
+  if (!line || line.hidden || !r) return;
+  line.textContent = r.pending ? shText('lbPosting') : !r.posted ? shText('lbNotPosted')
+    : r.rank ? shText('lbRank', { rank: r.rank }) : shText('lbPosted');
 }
 
 function onTerminal(terminal) {
@@ -537,14 +569,15 @@ function onTerminal(terminal) {
     }
     if (terminal === 'finished' && run.stage.difficulty === 'hard') grant('hard-milestone');
     canNext = terminal === 'finished' && run.stage.index + 1 < Content.STAGES.length;
-    progress = `Stage ${run.stage.index + 1} of ${Content.STAGES.length}. Unlocked through stage ${app.profile.journey.unlocked}.`;
+    const vars = { n: run.stage.index + 1, total: Content.STAGES.length, unlocked: app.profile.journey.unlocked };
+    progress = () => T('Stage {n} of {total}. Unlocked through stage {unlocked}.', vars);
   } else if (run.mode === 'learn') {
     if (terminal === 'finished') {
       app.profile.tutorials[run.lesson.id] = true;
       const all = Content.LESSONS.every((l) => app.profile.tutorials[l.id]);
       if (all) grant('mechanic-mastery');
       canNext = Content.LESSONS.indexOf(run.lesson) + 1 < Content.LESSONS.length;
-      progress = 'Lesson complete.';
+      progress = () => T('Lesson complete.');
     }
   } else if (run.mode === 'daily') {
     const key = 'daily-' + app.daily.dateKey;
@@ -553,12 +586,12 @@ function onTerminal(terminal) {
     const best = app.profile.bestScores[key];
     if (!best || bd.total > best.total) {
       app.profile.bestScores[key] = { total: bd.total, breakdown: bd, date: app.daily.dateKey };
-      progress = best ? `New daily best (was ${best.total}).` : 'First daily score recorded.';
+      progress = best ? () => T('New daily best (was {n}).', { n: best.total }) : () => T('First daily score recorded.');
     }
   } else if (run.mode === 'practice') {
-    progress = 'Practice run - unranked.';
+    progress = () => T('Practice run - unranked.');
   } else if (run.mode === 'challenge') {
-    progress = terminal === 'finished' ? 'Constraint held. Well done.' : 'The course won this time.';
+    progress = terminal === 'finished' ? () => T('Constraint held. Well done.') : () => T('The course won this time.');
   }
 
   persistProfile();
@@ -566,18 +599,18 @@ function onTerminal(terminal) {
   // Bests stay in the (cloud-saved) profile; hosted Journey, Daily and Challenge
   // runs are also posted to the StarHermit high-score board (below).
 
-  const headline = {
-    finished: 'You reached the relic gate!',
-    crashed: 'The vines brought you down.',
-    fell: 'You fell into the ruins.',
-    'time-up': 'The light faded - time up.',
-  }[terminal] || 'Run over';
+  const headlineKey = {
+    finished: N('You reached the relic gate!'),
+    crashed: N('The vines brought you down.'),
+    fell: N('You fell into the ruins.'),
+    'time-up': N('The light faded - time up.'),
+  }[terminal] || N('Run over');
 
   setMachine('results', terminal);
   ui.setProgress(progress || idleProgressText());
-  ui.renderResults({ headline: `${headline} - ${bd.total} pts`, breakdown: bd, progress, achievements: earned, canNext });
+  ui.renderResults({ headline: () => T('{headline} - {n} pts', { headline: T(headlineKey), n: bd.total }), breakdown: bd, progress, achievements: earned, canNext });
   ui.show('results');
-  ui.announce(`${headline}. Final score ${bd.total}.`, true);
+  ui.announce(T('{headline}. Final score {n}.', { headline: T(headlineKey), n: bd.total }), true);
   postToLeaderboard(run.mode, bd.total);
   ui.renderJourney(app.profile, (st) => startRun(stageRunConfig(st)));
   ui.renderLearn(app.profile, startLesson);
@@ -629,7 +662,7 @@ document.addEventListener('keydown', (e) => {
       if (app.renderer && app.sess) {
         const s = app.sess.state;
         app.renderer.camPos.set(0, Render.CAMERA.height, (s.distUnits / UNITS_PER_CELL) * 2 - Render.CAMERA.back);
-        ui.toast('Camera recentered.');
+        ui.toast(T('Camera recentered.'));
       }
       break;
     // Enter/Space already activate a focused button natively; handling them
@@ -710,6 +743,21 @@ setInterval(() => {
   const d = new Date();
   ui.setClock(d.toISOString().slice(11, 19) + ' UTC');
 }, 1000);
+
+// Language change (Settings → Language or the account preference arriving):
+// src/i18n.js re-applied the static markup; re-render what code wrote, in
+// place, without touching the run.
+onLanguage(() => {
+  ui.relabel();
+  if (gfxPanel) gfxPanel.relabel();
+  ui.renderJourney(app.profile, (st) => startRun(stageRunConfig(st)));
+  ui.renderLearn(app.profile, startLesson);
+  ui.renderPractice((diff) => startRun(practiceRunConfig(diff)));
+  ui.renderChallenges((c) => startRun(challengeRunConfig(c)));
+  if (ui.currentScreen === 'profile') ui.renderProfile(app.profile);
+  if (app.sess) ui.updateMirror(app.sess.state, UNITS_PER_CELL);
+  renderLeaderboardLine();
+});
 
 // start the app
 boot();
