@@ -18,7 +18,7 @@ const EN = {
     off: 'Off', on: 'On', low: 'Low', medium: 'Medium', high: 'High', fxaa: 'FXAA', smaa: 'SMAA', msaa: 'MSAA',
     sparse: 'Sparse', normal: 'Normal', dense: 'Dense', plain: 'Plain', detailed: 'Detailed',
   },
-  words: { noShadows: 'no shadows', shadows: '{n}² shadows', ao: 'AO', fullAo: 'full AO', bloom: 'bloom', noAA: 'no AA' },
+  words: { noShadows: 'no shadows', shadows: '{n}² shadows', ao: 'AO', fullAo: 'full AO', bloom: 'bloom', noAA: 'no AA', level: 'Level {n}' },
 };
 
 const ES = {
@@ -34,7 +34,7 @@ const ES = {
     off: 'Desactivado', on: 'Activado', low: 'Bajo', medium: 'Medio', high: 'Alto', fxaa: 'FXAA', smaa: 'SMAA', msaa: 'MSAA',
     sparse: 'Escaso', normal: 'Normal', dense: 'Denso', plain: 'Simple', detailed: 'Detallado',
   },
-  words: { noShadows: 'sin sombras', shadows: 'sombras {n}²', ao: 'OA', fullAo: 'OA completa', bloom: 'resplandor', noAA: 'sin AA' },
+  words: { noShadows: 'sin sombras', shadows: 'sombras {n}²', ao: 'OA', fullAo: 'OA completa', bloom: 'resplandor', noAA: 'sin AA', level: 'Nivel {n}' },
 };
 
 const FR = {
@@ -50,7 +50,7 @@ const FR = {
     off: 'Désactivé', on: 'Activé', low: 'Faible', medium: 'Moyen', high: 'Élevé', fxaa: 'FXAA', smaa: 'SMAA', msaa: 'MSAA',
     sparse: 'Clairsemé', normal: 'Normal', dense: 'Dense', plain: 'Simple', detailed: 'Détaillé',
   },
-  words: { noShadows: 'sans ombres', shadows: 'ombres {n}²', ao: 'OA', fullAo: 'OA complète', bloom: 'halo', noAA: 'sans AA' },
+  words: { noShadows: 'sans ombres', shadows: 'ombres {n}²', ao: 'OA', fullAo: 'OA complète', bloom: 'halo', noAA: 'sans AA', level: 'Niveau {n}' },
 };
 
 export const STRINGS = {
@@ -71,7 +71,7 @@ export const STRINGS = {
       off: 'Aus', on: 'An', low: 'Niedrig', medium: 'Mittel', high: 'Hoch', fxaa: 'FXAA', smaa: 'SMAA', msaa: 'MSAA',
       sparse: 'Spärlich', normal: 'Normal', dense: 'Dicht', plain: 'Einfach', detailed: 'Detailliert',
     },
-    words: { noShadows: 'keine Schatten', shadows: '{n}²-Schatten', ao: 'AO', fullAo: 'volle AO', bloom: 'Bloom', noAA: 'keine Kantenglättung' },
+    words: { noShadows: 'keine Schatten', shadows: '{n}²-Schatten', ao: 'AO', fullAo: 'volle AO', bloom: 'Bloom', noAA: 'keine Kantenglättung', level: 'Stufe {n}' },
   },
   'fr-FR': FR,
   'fr-CA': { ...FR, auto: 'Auto (détecté: {tier})' },
@@ -88,7 +88,7 @@ export const STRINGS = {
       off: 'Desligado', on: 'Ligado', low: 'Baixo', medium: 'Médio', high: 'Alto', fxaa: 'FXAA', smaa: 'SMAA', msaa: 'MSAA',
       sparse: 'Esparsa', normal: 'Normal', dense: 'Densa', plain: 'Simples', detailed: 'Detalhado',
     },
-    words: { noShadows: 'sem sombras', shadows: 'sombras {n}²', ao: 'OA', fullAo: 'OA completa', bloom: 'brilho', noAA: 'sem suavização' },
+    words: { noShadows: 'sem sombras', shadows: 'sombras {n}²', ao: 'OA', fullAo: 'OA completa', bloom: 'brilho', noAA: 'sem suavização', level: 'Nível {n}' },
   },
   'it-IT': {
     graphics: 'Grafica', quality: 'Qualità', auto: 'Automatica (rilevata: {tier})', renderScale: 'Scala di rendering',
@@ -103,7 +103,7 @@ export const STRINGS = {
       off: 'Disattivato', on: 'Attivato', low: 'Basso', medium: 'Medio', high: 'Alto', fxaa: 'FXAA', smaa: 'SMAA', msaa: 'MSAA',
       sparse: 'Rado', normal: 'Normale', dense: 'Denso', plain: 'Semplice', detailed: 'Dettagliato',
     },
-    words: { noShadows: 'nessuna ombra', shadows: 'ombre {n}²', ao: 'AO', fullAo: 'AO completa', bloom: 'bagliore', noAA: 'nessun AA' },
+    words: { noShadows: 'nessuna ombra', shadows: 'ombre {n}²', ao: 'AO', fullAo: 'AO completa', bloom: 'bagliore', noAA: 'nessun AA', level: 'Livello {n}' },
   },
 };
 
@@ -212,7 +212,8 @@ export function bindGraphics(settings, onChange, getInfo) {
     const sum = $('gfx-summary');
     const note = $('gfx-note');
     if (!info) { sum.textContent = ''; note.hidden = true; return; }
-    sum.textContent = `${info.gpu} · ${describe(info.resolved, info.pixels, L.words)}`;
+    sum.textContent = [info.gpu, info.level != null ? L.words.level.replace('{n}', info.level) : null,
+      describe(info.resolved, info.pixels, L.words)].filter(Boolean).join(' · ');
     note.textContent = L.postFailed;
     note.hidden = !info.postFailed;
   }

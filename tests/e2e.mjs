@@ -351,6 +351,7 @@ async function graphicsChecks() {
       await sleep(800);
       const sumHigh = await page.$eval('#gfx-summary', (e) => e.textContent);
       check(tag('High preset applied; summary shows cost'), (await attr())[0] === 'high' && /2048²/.test(sumHigh) && /px/.test(sumHigh), sumHigh);
+      check(tag('summary shows the hardware level'), / · Level 0 · /.test(sumHigh), sumHigh);
 
       await page.select('#gfx-bloom', 'off');
       await sleep(600);

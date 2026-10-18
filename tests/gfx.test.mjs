@@ -1,27 +1,56 @@
 // Relic Run - graphics quality model (pure, no three.js).
 import { describe, it, expect } from 'vitest';
-import { PRESETS, CATEGORIES, detectPreset, resolve, presetTier, applyPreset, describe as describeGfx } from '../src/gfx.js';
-import { STRINGS, pickLocale } from '../src/gfx-ui.js';
+import { readFileSync } from 'node:fs';
+// src/gpu-level.js is a classic script in the page (window.StarHermitGpu); evaluate it the same way here.
+new Function('window', 'module', readFileSync(new URL('../src/gpu-level.js', import.meta.url), 'utf8'))(globalThis, undefined);
+const { PRESETS, CATEGORIES, detectPreset, detectLevel, presetForLevel, budgetFor, moteCount, resolve, presetTier, applyPreset,
+  describe: describeGfx, LEVELS, BUDGETS, MOTE_MAX } = await import('../src/gfx.js');
+const { STRINGS, pickLocale } = await import('../src/gfx-ui.js');
 
-describe('detectPreset', () => {
-  it('software renderers get low', () => {
-    expect(detectPreset('ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)')).toBe('low');
-    expect(detectPreset('llvmpipe (LLVM 15.0.7, 256 bits)')).toBe('low');
+const DESK = { cores: 8, memoryGb: 8 };
+const PHONE = { mobile: true, cores: 8, memoryGb: 8 };
+
+describe('hardware level → Auto preset (Low 0, Balanced 4, High 10, Ultra 17)', () => {
+  it('maps desktop GPUs by level', () => {
+    expect(detectPreset('ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)', DESK)).toBe('low');
+    expect(detectLevel('llvmpipe (LLVM 15.0.7, 256 bits)', DESK)).toBe(0);
+    expect(detectPreset('', DESK)).toBe('low');
+    expect(detectPreset('ANGLE (AMD, AMD Radeon(TM) Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)', DESK)).toBe('low');
+    expect(detectPreset('ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0, D3D11)', DESK)).toBe('low');
+    expect(detectPreset('ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11)', DESK)).toBe('balanced');
+    expect(detectPreset('ANGLE (NVIDIA, NVIDIA GeForce GTX 1070 Direct3D11 vs_5_0 ps_5_0)', DESK)).toBe('high');
+    expect(detectPreset('ANGLE (NVIDIA, NVIDIA GeForce RTX 4080 Direct3D11 vs_5_0 ps_5_0)', DESK)).toBe('ultra');
+    expect(detectLevel('ANGLE (NVIDIA, NVIDIA GeForce RTX 5090 Direct3D11 vs_5_0 ps_5_0)', DESK)).toBe(20);
+    expect(detectPreset('ANGLE (NVIDIA, NVIDIA GeForce RTX 5090 Direct3D11 vs_5_0 ps_5_0)', DESK)).toBe('ultra');
+    for (const [p, lv] of Object.entries(LEVELS)) expect(presetForLevel(lv)).toBe(p);
+    expect(presetForLevel(3)).toBe('low');
+    expect(presetForLevel(16)).toBe('high');
   });
-  it('discrete GPUs and Apple M get high', () => {
-    expect(detectPreset('ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Direct3D11 vs_5_0 ps_5_0, D3D11)')).toBe('high');
-    expect(detectPreset('Apple M2 Pro')).toBe('high');
-    expect(detectPreset('AMD Radeon RX 6800')).toBe('high');
+  it('caps phones and tablets at Balanced; software GPUs stay Low', () => {
+    expect(detectPreset('Adreno (TM) 740', PHONE)).toBe('balanced');
+    expect(detectLevel('Adreno (TM) 740', PHONE)).toBeLessThanOrEqual(9);
+    expect(detectPreset('Apple M2', PHONE)).toBe('balanced');
+    expect(detectPreset('SwiftShader', PHONE)).toBe('low');
   });
-  it('integrated / unknown GPUs get balanced', () => {
-    expect(detectPreset('ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11)')).toBe('balanced');
-    expect(detectPreset('AMD Radeon Graphics')).toBe('balanced');
-    expect(detectPreset('')).toBe('balanced');
-  });
-  it('mobile devices are capped at balanced', () => {
-    expect(detectPreset('Apple M1', { mobile: true })).toBe('balanced');
-    expect(detectPreset('Adreno (TM) 740', { mobile: true })).toBe('balanced');
-    expect(detectPreset('SwiftShader', { mobile: true })).toBe('low');
+});
+
+describe('per-preset budgets', () => {
+  it('are explicit, grow from Low to Ultra and scale with the level', () => {
+    const keys = ['material', 'texture', 'bump', 'seg', 'motes', 'bloomRes', 'aoRes'];
+    for (const p of PRESETS) for (const k of keys) expect(BUDGETS[p][k], `${p}.${k}`).not.toBeUndefined();
+    for (let i = 1; i < PRESETS.length; i++) for (const k of keys) {
+      if (typeof BUDGETS.low[k] === 'number') expect(BUDGETS[PRESETS[i]][k], `${PRESETS[i]}.${k}`).toBeGreaterThanOrEqual(BUDGETS[PRESETS[i - 1]][k]);
+    }
+    expect(PRESETS.map((p) => BUDGETS[p].material)).toEqual(['lambert', 'standard', 'physical', 'physical']);
+    expect(PRESETS.map((p) => BUDGETS[p].bloomRes)).toEqual([0.5, 0.5, 0.5, 1]);
+    expect(resolve({ preset: 'high' }, 'low', 10).budget).toEqual(BUDGETS.high);
+    expect(resolve({ preset: 'ultra' }, 'low', 0).budget).toEqual(resolve({ preset: 'ultra' }, 'ultra', 17).budget);
+    expect(budgetFor('balanced', 9).motes).toBeGreaterThan(budgetFor('balanced', 4).motes);
+    expect(budgetFor('ultra', 20).motes).toBeLessThanOrEqual(MOTE_MAX);
+    expect(moteCount(resolve({ preset: 'high' }, 'low', 10))).toBe(BUDGETS.high.motes);
+    expect(moteCount(resolve({ preset: 'balanced' }, 'low', 4))).toBe(Math.round(BUDGETS.balanced.motes * 0.35));
+    expect(moteCount(resolve({ preset: 'low' }, 'low', 0))).toBe(0);
+    expect(resolve({}, 'low', 0).budget.material).toBe('lambert');
   });
 });
 

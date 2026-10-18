@@ -13,7 +13,7 @@ import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { FXAAPass } from 'three/addons/postprocessing/FXAAPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { mulberry32, UNITS_PER_CELL, LANES } from './rules.js';
-import { detectPreset, describe, resolve, SHADOW_MAP } from './gfx.js';
+import { detectLevel, presetForLevel, describe, resolve, moteCount, SHADOW_MAP } from './gfx.js';
 
 // The chase camera looks toward +Z, so positive world X is screen-left.
 const LANE_SPACING = 2.2;
@@ -37,7 +37,6 @@ const FOLIAGE = {
   normal: { vegetationPerSide: 90, pillarEvery: 4 },
   dense: { vegetationPerSide: 160, pillarEvery: 3 },
 };
-const PARTICLES = { off: 0, low: 70, high: 200 };
 const SHADOW_EXTENT = 14;
 
 export class WebGLUnavailableError extends Error {
@@ -49,6 +48,25 @@ function isMobileDevice() {
     if (globalThis.matchMedia && globalThis.matchMedia('(pointer: coarse)').matches) return true;
   } catch { /* ignore */ }
   return /Mobi|Android|iPhone|iPad/i.test(globalThis.navigator ? navigator.userAgent : '');
+}
+
+// Run a post pass at a fraction of the frame: EffectComposer.addPass/setSize hand every pass the full
+// frame size, so the pass's own setSize applies the budget's scale (half-res bloom/GTAO below Ultra).
+function atScale(pass, k) {
+  if (!(k < 1)) return pass;
+  const setSize = pass.setSize.bind(pass);
+  pass.setSize = (w, h) => setSize(Math.max(1, Math.round(w * k)), Math.max(1, Math.round(h * k)));
+  return pass;
+}
+
+// StarHermit hardware level (src/gpu-level.js): renderer string + device facts (phone/tablet, cores, memory).
+function hardwareLevel(gpu, renderer) {
+  let sys = { mobile: isMobileDevice(), webgl2: renderer.capabilities.isWebGL2 };
+  try {
+    const G = globalThis.StarHermitGpu;
+    if (G) { const d = G.detectSystem(); sys = { ...sys, mobile: sys.mobile || d.mobile, touch: d.touch, screen: d.screen, cores: d.cores, memoryGb: d.memoryGb, astc: d.astc }; }
+  } catch { /* defaults */ }
+  return detectLevel(gpu, sys);
 }
 
 function osReducedMotion() {
@@ -91,7 +109,8 @@ export function createRenderer(canvas, opts = {}) {
     course: null,
     // graphics state
     gpu,
-    detected: detectPreset(gpu, { mobile: isMobileDevice() }),
+    gpuLevel: 0,
+    detected: 'low',
     saved: {},
     q: null,
     size: [canvas.clientWidth || 640, canvas.clientHeight || 480],
@@ -108,7 +127,9 @@ export function createRenderer(canvas, opts = {}) {
     envTex: null,
     u: { uTime: { value: 0 }, uWind: { value: 0 } },
   };
-  R.q = resolve(opts.gfx || {}, R.detected);
+  R.gpuLevel = hardwareLevel(gpu, renderer);
+  R.detected = presetForLevel(R.gpuLevel);
+  R.q = resolve(opts.gfx || {}, R.detected, R.gpuLevel);
   applyShadowState(R);
 
   canvas.addEventListener('webglcontextlost', (e) => {
@@ -158,17 +179,19 @@ export function setGraphics(R, saved) {
   R.gfxJson = json;
   const prev = R.q;
   R.saved = { ...(saved || {}) };
-  R.q = resolve(R.saved, R.detected);
+  R.q = resolve(R.saved, R.detected, R.gpuLevel);
   const q = R.q;
+  const pb = prev.budget || {}, b = q.budget;
+  const assetsChanged = pb.material !== b.material || pb.texture !== b.texture || pb.bump !== b.bump || pb.seg !== b.seg;
   applyShadowState(R);
   R.adaptiveScale = 1;
   R.frames = [];
   R.postKey = null; // rebuild the post chain on the next frame
   R.postFailed = false;
   R.u.uWind.value = q.wind === 'on' && motionOn(R) ? 1 : 0;
-  if (R.course && (prev.foliage !== q.foliage || prev.detail !== q.detail)) {
+  if (R.course && (prev.foliage !== q.foliage || prev.detail !== q.detail || assetsChanged)) {
     buildCourseScene(R, R.course, R.theme, R.decorSeed);
-  } else if (R.scene && prev.particles !== q.particles) {
+  } else if (R.scene && moteCount(prev) !== moteCount(q)) {
     buildParticles(R);
   }
   fpsVisible(q.showFps);
@@ -184,6 +207,7 @@ export function graphicsInfo(R) {
   const px = [Math.round(R.size[0] * pr), Math.round(R.size[1] * pr)];
   return {
     gpu: R.gpu || 'unknown GPU',
+    level: R.gpuLevel,
     detected: R.detected,
     resolved: R.q,
     pixels: px,
@@ -220,10 +244,13 @@ export function resize(R, width, height) {
 }
 
 // --- procedural textures (detail: detailed) ----------------------------------------
+// Textures are authored at 256 px and drawn into the preset's texture budget.
 function canvasTex(size, draw, repeat) {
   const c = document.createElement('canvas');
   c.width = c.height = size;
-  draw(c.getContext('2d'), size);
+  const g = c.getContext('2d');
+  g.scale(size / 256, size / 256);
+  draw(g, 256);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
@@ -464,47 +491,60 @@ export function buildCourseScene(R, course, theme, seed) {
     scene.add(rim);
   }
 
+  // Shading per the preset's budget: Lambert on Low, Standard on Balanced, Physical (clear-coated relics,
+  // sheen tunic) on High/Ultra; bump maps only where the budget allows. Colours and emission are unchanged.
+  const bud = q.budget;
+  const seg = (n, min = 3) => Math.max(min, Math.round(n * bud.seg));
+  const surface = (p) => {
+    const { roughness, metalness, clearcoat, clearcoatRoughness, sheen, sheenColor, envMapIntensity, bumpMap, bumpScale, ...base } = p;
+    if (bud.material === 'lambert') return new THREE.MeshLambertMaterial(base);
+    const std = { ...base, roughness: roughness ?? 1, metalness: metalness ?? 0 };
+    if (envMapIntensity !== undefined) std.envMapIntensity = envMapIntensity;
+    if (bumpMap && bud.bump) Object.assign(std, { bumpMap, bumpScale });
+    if (bud.material === 'standard' || !(clearcoat || sheen)) return new THREE.MeshStandardMaterial(std);
+    return new THREE.MeshPhysicalMaterial({ ...std, clearcoat: clearcoat || 0, clearcoatRoughness: clearcoatRoughness || 0, sheen: sheen || 0, ...(sheenColor !== undefined ? { sheenColor } : {}) });
+  };
   let mats;
   if (detailed) {
-    const tileTex = canvasTex(256, drawTile(R.decorSeed ^ 0x51));
-    const blockTex = canvasTex(256, drawBlocks(R.decorSeed ^ 0x77), [2, 1]);
-    const mossTex = canvasTex(256, drawMoss(R.decorSeed ^ 0x99), [6, Math.max(1, nCells / 3)]);
+    const tileTex = canvasTex(bud.texture, drawTile(R.decorSeed ^ 0x51));
+    const blockTex = canvasTex(bud.texture, drawBlocks(R.decorSeed ^ 0x77), [2, 1]);
+    const mossTex = canvasTex(bud.texture, drawMoss(R.decorSeed ^ 0x99), [6, Math.max(1, nCells / 3)]);
     textures.push(tileTex, blockTex, mossTex);
     mats = {
-      stone: new THREE.MeshStandardMaterial({ color: theme.stone, map: tileTex, bumpMap: tileTex, bumpScale: 1.2, roughness: 0.85 }),
-      pillarStone: new THREE.MeshStandardMaterial({ color: theme.stone, map: blockTex, bumpMap: blockTex, bumpScale: 1.5, roughness: 0.9 }),
-      stoneDark: new THREE.MeshStandardMaterial({ color: theme.stoneDark, map: mossTex, roughness: 1.0 }),
-      foliage: new THREE.MeshStandardMaterial({ color: theme.foliage, roughness: 0.8, flatShading: true }),
-      foliageAlt: new THREE.MeshStandardMaterial({ color: theme.foliageAlt, roughness: 0.8, flatShading: true }),
-      trunk: new THREE.MeshStandardMaterial({ color: 0x5a4632, roughness: 1.0 }),
-      relic: new THREE.MeshPhysicalMaterial({
+      stone: surface({ color: theme.stone, map: tileTex, bumpMap: tileTex, bumpScale: 1.2, roughness: 0.85 }),
+      pillarStone: surface({ color: theme.stone, map: blockTex, bumpMap: blockTex, bumpScale: 1.5, roughness: 0.9 }),
+      stoneDark: surface({ color: theme.stoneDark, map: mossTex, roughness: 1.0 }),
+      foliage: surface({ color: theme.foliage, roughness: 0.8, flatShading: true }),
+      foliageAlt: surface({ color: theme.foliageAlt, roughness: 0.8, flatShading: true }),
+      trunk: surface({ color: 0x5a4632, roughness: 1.0 }),
+      relic: surface({
         color: R.colorblind ? 0x9ff5ff : theme.relic,
         emissive: R.colorblind ? 0x2a6a77 : theme.relic, emissiveIntensity: 0.9,
         roughness: 0.12, metalness: 0.0, clearcoat: 1.0, clearcoatRoughness: 0.06, envMapIntensity: 1.6,
       }),
-      barrier: new THREE.MeshStandardMaterial({ color: 0x6b4f2e, map: blockTex, bumpMap: blockTex, bumpScale: 1.0, roughness: 0.95 }),
-      branch: new THREE.MeshStandardMaterial({ color: theme.accent, emissive: theme.accent, emissiveIntensity: 0.6, roughness: 0.35 }),
-      risk: new THREE.MeshStandardMaterial({ color: 0xff8c5a, emissive: 0xb04018, emissiveIntensity: 0.5 }),
-      player: new THREE.MeshPhysicalMaterial({ color: 0xf0e2c0, roughness: 0.55, sheen: 0.6, sheenColor: 0xfff2d0 }),
-      playerAccent: new THREE.MeshStandardMaterial({ color: 0x3a6a4f, roughness: 0.45 }),
-      lantern: new THREE.MeshStandardMaterial({ color: 0xffd98a, emissive: 0xffc860, emissiveIntensity: 2.2 }),
+      barrier: surface({ color: 0x6b4f2e, map: blockTex, bumpMap: blockTex, bumpScale: 1.0, roughness: 0.95 }),
+      branch: surface({ color: theme.accent, emissive: theme.accent, emissiveIntensity: 0.6, roughness: 0.35 }),
+      risk: surface({ color: 0xff8c5a, emissive: 0xb04018, emissiveIntensity: 0.5 }),
+      player: surface({ color: 0xf0e2c0, roughness: 0.55, sheen: 0.6, sheenColor: 0xfff2d0 }),
+      playerAccent: surface({ color: 0x3a6a4f, roughness: 0.45 }),
+      lantern: surface({ color: 0xffd98a, emissive: 0xffc860, emissiveIntensity: 2.2 }),
     };
   } else {
     mats = {
-      stone: new THREE.MeshStandardMaterial({ color: theme.stone, roughness: 0.9 }),
-      stoneDark: new THREE.MeshStandardMaterial({ color: theme.stoneDark, roughness: 1.0 }),
-      foliage: new THREE.MeshStandardMaterial({ color: theme.foliage, roughness: 1.0 }),
-      foliageAlt: new THREE.MeshStandardMaterial({ color: theme.foliageAlt, roughness: 1.0 }),
-      trunk: new THREE.MeshStandardMaterial({ color: 0x5a4632, roughness: 1.0 }),
-      relic: new THREE.MeshStandardMaterial({
+      stone: surface({ color: theme.stone, roughness: 0.9 }),
+      stoneDark: surface({ color: theme.stoneDark, roughness: 1.0 }),
+      foliage: surface({ color: theme.foliage, roughness: 1.0 }),
+      foliageAlt: surface({ color: theme.foliageAlt, roughness: 1.0 }),
+      trunk: surface({ color: 0x5a4632, roughness: 1.0 }),
+      relic: surface({
         color: R.colorblind ? 0x9ff5ff : theme.relic,
         emissive: R.colorblind ? 0x2a6a77 : theme.relic, emissiveIntensity: 0.5, roughness: 0.3,
       }),
-      barrier: new THREE.MeshStandardMaterial({ color: 0x6b4f2e, roughness: 0.95 }),
-      branch: new THREE.MeshStandardMaterial({ color: theme.accent, emissive: theme.accent, emissiveIntensity: 0.35 }),
-      risk: new THREE.MeshStandardMaterial({ color: 0xff8c5a, emissive: 0x903010, emissiveIntensity: 0.3 }),
-      player: new THREE.MeshStandardMaterial({ color: 0xf0e2c0, roughness: 0.6 }),
-      playerAccent: new THREE.MeshStandardMaterial({ color: 0x3a6a4f, roughness: 0.5 }),
+      barrier: surface({ color: 0x6b4f2e, roughness: 0.95 }),
+      branch: surface({ color: theme.accent, emissive: theme.accent, emissiveIntensity: 0.35 }),
+      risk: surface({ color: 0xff8c5a, emissive: 0x903010, emissiveIntensity: 0.3 }),
+      player: surface({ color: 0xf0e2c0, roughness: 0.6 }),
+      playerAccent: surface({ color: 0x3a6a4f, roughness: 0.5 }),
     };
     mats.pillarStone = mats.stone;
   }
@@ -534,7 +574,7 @@ export function buildCourseScene(R, course, theme, seed) {
         uSunDir: { value: new THREE.Vector3(-0.35, 0.3, 1) },
       },
     });
-    const sky = new THREE.Mesh(new THREE.SphereGeometry(90, 32, 16), skyMat);
+    const sky = new THREE.Mesh(new THREE.SphereGeometry(90, seg(32, 12), seg(16, 8)), skyMat);
     sky.frustumCulled = false;
     sky.renderOrder = -1;
     scene.add(sky);
@@ -646,7 +686,7 @@ export function buildCourseScene(R, course, theme, seed) {
   scene.add(strips);
 
   // decoration: pillars + vegetation, from the deterministic decoration stream
-  const pillarGeo = new THREE.CylinderGeometry(0.45, 0.55, 3.4, detailed ? 10 : 7);
+  const pillarGeo = new THREE.CylinderGeometry(0.45, 0.55, 3.4, seg(detailed ? 10 : 7, 5));
   const nPillars = Math.floor(nCells / fol.pillarEvery) * 2;
   const pillars = new THREE.InstancedMesh(pillarGeo, mats.pillarStone, Math.max(1, nPillars));
   let pi = 0;
@@ -664,7 +704,7 @@ export function buildCourseScene(R, course, theme, seed) {
   pillars.receiveShadow = detailed;
   scene.add(pillars);
 
-  const bushGeo = new THREE.ConeGeometry(0.9, 1.6, detailed ? 7 : 6, detailed ? 2 : 1);
+  const bushGeo = new THREE.ConeGeometry(0.9, 1.6, seg(detailed ? 7 : 6, 5), detailed ? seg(2, 1) : 1);
   const nVeg = fol.vegetationPerSide * 2;
   const veg = new THREE.InstancedMesh(bushGeo, mats.foliage, Math.max(1, nVeg));
   for (let k = 0; k < nVeg; k++) {
@@ -680,7 +720,7 @@ export function buildCourseScene(R, course, theme, seed) {
   veg.castShadow = q.shadows === 'high';
   scene.add(veg);
 
-  const leafGeo = new THREE.ConeGeometry(1.1, 2.6, detailed ? 8 : 6, detailed ? 3 : 1);
+  const leafGeo = new THREE.ConeGeometry(1.1, 2.6, seg(detailed ? 8 : 6, 5), detailed ? seg(3, 1) : 1);
   const trees = new THREE.InstancedMesh(leafGeo, mats.foliageAlt, Math.max(1, Math.floor(nVeg / 3)));
   const trunkGeo = new THREE.CylinderGeometry(0.18, 0.24, 1.6, 5);
   const trunks = new THREE.InstancedMesh(trunkGeo, mats.trunk, Math.max(1, Math.floor(nVeg / 3)));
@@ -704,16 +744,16 @@ export function buildCourseScene(R, course, theme, seed) {
 
   // player: body + head (+ satchel and lantern when detailed), reused forever
   const player = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.34, 0.6, detailed ? 6 : 3, detailed ? 16 : 8), mats.player);
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.34, 0.6, seg(detailed ? 6 : 3, 2), seg(detailed ? 16 : 8, 6)), mats.player);
   body.position.y = 0.75;
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.26, detailed ? 20 : 10, detailed ? 14 : 8), mats.playerAccent);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.26, seg(detailed ? 20 : 10, 8), seg(detailed ? 14 : 8, 6)), mats.playerAccent);
   head.position.y = 1.45;
   player.add(body, head);
   if (detailed) {
-    const satchel = new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 10), mats.trunk);
+    const satchel = new THREE.Mesh(new THREE.SphereGeometry(0.2, seg(14, 8), seg(10, 6)), mats.trunk);
     satchel.scale.set(1.1, 1.25, 0.6);
     satchel.position.set(0, 0.92, -0.3);
-    const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 8), mats.lantern);
+    const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.1, seg(12, 8), seg(8, 6)), mats.lantern);
     lantern.position.set(0.36, 0.72, 0.12);
     player.add(satchel, lantern);
   }
@@ -737,7 +777,7 @@ function buildParticles(R) {
     R.motes.material.dispose();
     R.motes = null;
   }
-  const n = PARTICLES[R.q.particles] || 0;
+  const n = moteCount(R.q);
   if (!n || !R.scene) return;
   const rnd = mulberry32((R.decorSeed ^ 0xf1f1) >>> 0);
   const pos = new Float32Array(n * 3);
@@ -897,7 +937,7 @@ export function addShake(R, amp) {
 // --- post-processing + frame --------------------------------------------------------
 function postKey(R) {
   const q = R.q;
-  return q.post ? [q.ao, q.bloom, q.grade, q.antialias, R.size[0], R.size[1], R.pixelRatio].join('|') : 'none';
+  return q.post ? [q.ao, q.bloom, q.grade, q.antialias, q.budget.bloomRes, q.budget.aoRes, R.size[0], R.size[1], R.pixelRatio].join('|') : 'none';
 }
 
 function buildPost(R) {
@@ -921,11 +961,11 @@ function buildPost(R) {
       ao.blendIntensity = 0.7;
       ao.updateGtaoMaterial({ radius: 0.9, distanceExponent: 1.5, thickness: 1.5, scale: 1.0, samples: q.ao === 'high' ? 16 : 8 });
       ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: q.ao === 'high' ? 6 : 4, rings: 2, samples: q.ao === 'high' ? 16 : 8 });
-      composer.addPass(ao);
+      composer.addPass(atScale(ao, q.budget.aoRes));
     }
     if (q.bloom === 'on') {
       // high threshold: only relics, the lantern, fork markers and fireflies bloom
-      composer.addPass(new UnrealBloomPass(new THREE.Vector2(w, h), 0.55, 0.4, 0.9));
+      composer.addPass(atScale(new UnrealBloomPass(new THREE.Vector2(w, h), 0.55, 0.4, 0.9), q.budget.bloomRes));
     }
     if (q.grade === 'on') composer.addPass(new ShaderPass(GradeShader));
     composer.addPass(new OutputPass());
