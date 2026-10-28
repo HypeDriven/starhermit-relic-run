@@ -1,0 +1,109 @@
+# Challenge "Swift Relic" on a phone held sideways (844 × 390 at DPR 3) by keys (tools/gen-plays.mjs; generated: do
+# not edit), with a pause by Escape and Resume on the way, to its results.
+# viewport 844x390@3
+until 300 Relic Run
+frames 30
+click =Play
+until 60 Choose a mode
+frames 10
+click Open — Challenge
+until 60 Challenges
+frames 10
+save challenges
+click Run — Swift Relic
+frames 195
+key KeyA 1
+frames 16
+key KeyA 1
+frames 6
+key KeyD 1
+frames 8
+key KeyD 1
+frames 4
+key KeyW 1
+frames 12
+key KeyA 1
+frames 2
+key KeyA 1
+frames 6
+key KeyW 1
+frames 14
+key KeyS 1
+frames 16
+key KeyD 1
+frames 36
+key KeyA 1
+frames 8
+key KeyS 1
+frames 12
+key KeyD 1
+frames 8
+key KeyS 1
+frames 22
+key KeyD 1
+frames 6
+key KeyA 1
+frames 2
+key KeyA 1
+frames 4
+key KeyD 1
+frames 2
+key KeyD 1
+frames 6
+key KeyS 1
+frames 24
+key KeyA 1
+frames 8
+key KeyS 1
+frames 28
+key KeyS 1
+frames 12
+key KeyA 1
+frames 10
+key KeyD 1
+frames 14
+key KeyD 1
+frames 6
+key KeyA 1
+frames 8
+key KeyS 1
+frames 10
+key KeyD 1
+frames 6
+key KeyA 1
+frames 8
+key KeyS 1
+frames 24
+key KeyA 1
+frames 26
+key KeyS 1
+frames 18
+key KeyS 1
+frames 14
+key KeyS 1
+frames 18
+key KeyA 1
+frames 8
+key KeyD 1
+frames 18
+key KeyA 1
+frames 20
+key KeyS 1
+frames 18
+key KeyA 1
+frames 4
+key KeyW 1
+frames 16
+key KeyS 1
+frames 14
+key KeyW 1
+frames 10
+key KeyD 1
+frames 6
+key KeyA 1
+save challenge-run
+until 1500 Run complete
+frames 20
+expect Constraint held. Well done.
+expect =2004
+save challenge

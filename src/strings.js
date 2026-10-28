@@ -1,9 +1,9 @@
-/* Relic Run — translation tables (see src/i18n.js).
+/* Relic Run — translation tables (native/i18n.ts loads this classic script).
  * Each row: [English key, es-419, de-DE, fr-FR, pt-BR, it-IT]. en-GB, es-ES and
  * fr-CA list only where they differ from en-US, es-419 and fr-FR.
- * "Relic Run" and "StarHermit" are names and stay as they are. The Graphics
- * strings live in src/gfx-ui.js and the account strings in src/sh-i18n.js;
- * both follow the same game language.
+ * "Relic Run" and "StarHermit" are names and stay as they are. The account
+ * strings live in src/platform-i18n.js. tests/i18n.test.js checks that every
+ * key the client draws is here and no row is unused.
  */
 (function (root) {
   'use strict';
@@ -11,22 +11,18 @@
     // ---- status bar, rails, HUD, tray
     ['offline', 'sin conexión', 'offline', 'hors ligne', 'offline', 'offline'],
     ['online', 'en línea', 'online', 'en ligne', 'online', 'online'],
-    ['Objective and progress', 'Objetivo y progreso', 'Ziel und Fortschritt', 'Objectif et progression', 'Objetivo e progresso', 'Obiettivo e avanzamento'],
     ['Objective', 'Objetivo', 'Ziel', 'Objectif', 'Objetivo', 'Obiettivo'],
     ['Choose a mode to begin.', 'Elige un modo para empezar.', 'Wähle einen Modus, um zu beginnen.', 'Choisissez un mode pour commencer.', 'Escolha um modo para começar.', 'Scegli una modalità per iniziare.'],
     ['Progress', 'Progreso', 'Fortschritt', 'Progression', 'Progresso', 'Progressi'],
     ['Next up', 'A continuación', 'Als Nächstes', 'À venir', 'A seguir', 'In arrivo'],
-    ['Run status', 'Estado de la carrera', 'Laufstatus', 'État de la course', 'Status da corrida', 'Stato della corsa'],
     ['pts', 'pts', 'Pkt.', 'pts', 'pts', 'pt'],
     ['fragments', 'fragmentos', 'Fragmente', 'fragments', 'fragmentos', 'frammenti'],
     ['Pause', 'Pausa', 'Pause', 'Pause', 'Pausar', 'Pausa'],
-    ['Upcoming hazards', 'Peligros próximos', 'Kommende Gefahren', 'Dangers à venir', 'Perigos à frente', 'Pericoli in arrivo'],
     ['Actions', 'Acciones', 'Aktionen', 'Actions', 'Ações', 'Azioni'],
     ['◀ Left', '◀ Izquierda', '◀ Links', '◀ Gauche', '◀ Esquerda', '◀ Sinistra'],
     ['Jump ▲', 'Saltar ▲', 'Springen ▲', 'Sauter ▲', 'Pular ▲', 'Salta ▲'],
     ['Slide ▼', 'Deslizarse ▼', 'Rutschen ▼', 'Glisser ▼', 'Deslizar ▼', 'Scivola ▼'],
     ['Right ▶', 'Derecha ▶', 'Rechts ▶', 'Droite ▶', 'Direita ▶', 'Destra ▶'],
-    ['Actions and status', 'Acciones y estado', 'Aktionen und Status', 'Actions et état', 'Ações e status', 'Azioni e stato'],
     ['Turn / Left', 'Girar / Izquierda', 'Abbiegen / Links', 'Tourner / Gauche', 'Virar / Esquerda', 'Svolta / Sinistra'],
     ['Turn / Right', 'Girar / Derecha', 'Abbiegen / Rechts', 'Tourner / Droite', 'Virar / Direita', 'Svolta / Destra'],
     ['Jump', 'Saltar', 'Springen', 'Sauter', 'Pular', 'Salta'],
@@ -39,7 +35,6 @@
     ['progress synced', 'progreso sincronizado', 'Fortschritt synchronisiert', 'progression synchronisée', 'progresso sincronizado', 'progressi sincronizzati'],
     ['saving…', 'guardando…', 'wird gespeichert …', 'enregistrement…', 'salvando…', 'salvataggio…'],
     ['local progress', 'progreso local', 'lokaler Fortschritt', 'progression locale', 'progresso local', 'progressi locali'],
-    ['Player {id}', 'Jugador {id}', 'Spieler {id}', 'Joueur {id}', 'Jogador {id}', 'Giocatore {id}'],
 
     // ---- title, modes
     ['Run the overgrown ruins. Turn at forks, leap the gaps, slide the vines, gather the relics.', 'Corre por las ruinas cubiertas de maleza. Gira en las bifurcaciones, salta los huecos, deslízate bajo las lianas y reúne las reliquias.', 'Lauf durch die überwucherten Ruinen. Biege an Gabelungen ab, spring über Lücken, rutsch unter Ranken durch, sammle die Relikte.', 'Courez dans les ruines envahies. Tournez aux embranchements, sautez les trous, glissez sous les lianes, ramassez les reliques.', 'Corra pelas ruínas cobertas de mato. Vire nas bifurcações, pule os buracos, deslize sob os cipós, colete as relíquias.', 'Corri tra le rovine invase dalla vegetazione. Svolta ai bivi, salta i buchi, scivola sotto i rampicanti, raccogli le reliquie.'],
@@ -91,21 +86,10 @@
     ['Space', 'Espacio', 'Leertaste', 'Espace', 'Espaço', 'Spazio'],
 
     // ---- settings
-    ['Audio', 'Audio', 'Audio', 'Audio', 'Áudio', 'Audio'],
-    ['Master', 'General', 'Gesamt', 'Général', 'Geral', 'Generale'],
-    ['Music', 'Música', 'Musik', 'Musique', 'Música', 'Musica'],
-    ['Effects', 'Efectos', 'Effekte', 'Effets', 'Efeitos', 'Effetti'],
-    ['Ambience', 'Ambiente', 'Atmosphäre', 'Ambiance', 'Ambiente', 'Ambiente'],
-    ['Mute all', 'Silenciar todo', 'Alles stumm', 'Tout couper', 'Silenciar tudo', 'Silenzia tutto'],
-    ['Reduced motion', 'Movimiento reducido', 'Weniger Bewegung', 'Animations réduites', 'Movimento reduzido', 'Movimento ridotto'],
     ['Controls', 'Controles', 'Steuerung', 'Commandes', 'Controles', 'Comandi'],
     ['Left-handed layout', 'Diseño para zurdos', 'Linkshänder-Anordnung', 'Disposition pour gauchers', 'Layout para canhotos', 'Disposizione per mancini'],
-    ['Hold to slide (vs toggle)', 'Mantener para deslizarse (en vez de alternar)', 'Halten zum Rutschen (statt Umschalten)', 'Maintenir pour glisser (plutôt que basculer)', 'Segurar para deslizar (em vez de alternar)', 'Tieni premuto per scivolare (invece di alternare)'],
-    ['Haptics', 'Vibración', 'Haptik', 'Retour haptique', 'Vibração', 'Vibrazione'],
     ['Accessibility', 'Accesibilidad', 'Barrierefreiheit', 'Accessibilité', 'Acessibilidade', 'Accessibilità'],
     ['Colorblind-safe palette', 'Paleta apta para daltonismo', 'Farbenblind-sichere Palette', 'Palette adaptée au daltonisme', 'Paleta segura para daltonismo', 'Tavolozza per daltonici'],
-    ['High contrast', 'Alto contraste', 'Hoher Kontrast', 'Contraste élevé', 'Alto contraste', 'Contrasto elevato'],
-    ['Larger text', 'Texto más grande', 'Größere Schrift', 'Texte plus grand', 'Texto maior', 'Testo più grande'],
     ['Timing assistance', 'Ayuda de ritmo', 'Timing-Hilfe', 'Aide au timing', 'Assistência de ritmo', 'Aiuto tempismo'],
     ['Replay tutorials', 'Repetir tutoriales', 'Tutorials wiederholen', 'Revoir les tutoriels', 'Repetir tutoriais', 'Ripeti i tutorial'],
     ['Reset lessons', 'Restablecer lecciones', 'Lektionen zurücksetzen', 'Réinitialiser les leçons', 'Redefinir lições', 'Azzera le lezioni'],
@@ -115,8 +99,6 @@
     ['Friends & scores', 'Amigos y puntuaciones', 'Freunde & Punkte', 'Amis et scores', 'Amigos e pontuações', 'Amici e punteggi'],
     ['Leaderboard', 'Clasificación', 'Bestenliste', 'Classement', 'Ranking', 'Classifica'],
     ['Achievements', 'Logros', 'Erfolge', 'Succès', 'Conquistas', 'Obiettivi'],
-    ['3D not available', '3D no disponible', '3D nicht verfügbar', '3D indisponible', '3D indisponível', '3D non disponibile'],
-    ['Relic Run needs WebGL to render the ruins. Your browser or device blocked it. You can still browse menus, but a run needs a WebGL-capable browser.', 'Relic Run necesita WebGL para mostrar las ruinas. Tu navegador o dispositivo lo bloqueó. Aún puedes ver los menús, pero una carrera necesita un navegador compatible con WebGL.', 'Relic Run braucht WebGL, um die Ruinen darzustellen. Dein Browser oder Gerät hat es blockiert. Die Menüs funktionieren weiter, aber ein Lauf braucht einen Browser mit WebGL.', 'Relic Run a besoin de WebGL pour afficher les ruines. Votre navigateur ou appareil l’a bloqué. Vous pouvez parcourir les menus, mais une course nécessite un navigateur compatible WebGL.', 'Relic Run precisa de WebGL para mostrar as ruínas. Seu navegador ou dispositivo bloqueou. Você ainda pode navegar pelos menus, mas uma corrida precisa de um navegador com WebGL.', 'Relic Run ha bisogno di WebGL per mostrare le rovine. Il browser o il dispositivo l’ha bloccato. Puoi comunque sfogliare i menu, ma una corsa richiede un browser con WebGL.'],
     ['Connected - live leaderboard below your personal records.', 'Conectado: clasificación en vivo debajo de tus récords personales.', 'Verbunden – Live-Bestenliste unter deinen persönlichen Rekorden.', 'Connecté — classement en direct sous vos records personnels.', 'Conectado — ranking ao vivo abaixo dos seus recordes.', 'Connesso: classifica in tempo reale sotto i tuoi record.'],
     ['Offline - showing locally saved records.', 'Sin conexión: se muestran los récords guardados en el dispositivo.', 'Offline – lokal gespeicherte Rekorde.', 'Hors ligne — records enregistrés sur l’appareil.', 'Offline — mostrando recordes salvos no dispositivo.', 'Offline: vengono mostrati i record salvati sul dispositivo.'],
     ['No personal records yet. Finish a ranked run to set one.', 'Aún no hay récords personales. Termina una carrera clasificatoria para registrar uno.', 'Noch keine persönlichen Rekorde. Beende einen gewerteten Lauf, um einen aufzustellen.', 'Pas encore de record personnel. Terminez une course classée pour en établir un.', 'Ainda não há recordes. Termine uma corrida ranqueada para registrar um.', 'Ancora nessun record personale. Completa una corsa classificata per stabilirne uno.'],
@@ -183,7 +165,6 @@
     ['Challenge · {type}.', 'Desafío · {type}.', 'Herausforderung · {type}.', 'Défi · {type}.', 'Desafio · {type}.', 'Sfida · {type}.'],
     ['move limit', 'límite de movimientos', 'Zuglimit', 'coups limités', 'limite de movimentos', 'limite di mosse'],
     ['speed target', 'meta de velocidad', 'Tempoziel', 'objectif de vitesse', 'meta de velocidade', 'obiettivo di velocità'],
-    ['ranked', 'clasificatorio', 'gewertet', 'classé', 'ranqueado', 'classificato'],
     ['Journey: {name}', 'Travesía: {name}', 'Reise: {name}', 'Voyage : {name}', 'Jornada: {name}', 'Viaggio: {name}'],
     ['Lesson: {name}', 'Lección: {name}', 'Lektion: {name}', 'Leçon : {name}', 'Lição: {name}', 'Lezione: {name}'],
     ['Practice ({level})', 'Práctica ({level})', 'Training ({level})', 'Entraînement ({level})', 'Treino ({level})', 'Allenamento ({level})'],
@@ -308,7 +289,11 @@
     ['Last Causeway', 'Última calzada', 'Letzter Damm', 'Dernière chaussée', 'Última calçada', 'Ultima strada rialzata'],
     ['Ancient Heart', 'Corazón antiguo', 'Uraltes Herz', 'Cœur ancien', 'Coração antigo', 'Cuore antico'],
     ['Overgrown Throne', 'Trono invadido', 'Überwucherter Thron', 'Trône envahi', 'Trono tomado pelo mato', 'Trono invaso'],
-    ['Mastery: The Relic', 'Maestría: La reliquia', 'Meisterprüfung: Das Relikt', 'Maîtrise : La relique', 'Maestria: A relíquia', 'Maestria: La reliquia']
+    ['Mastery: The Relic', 'Maestría: La reliquia', 'Meisterprüfung: Das Relikt', 'Maîtrise : La relique', 'Maestria: A relíquia', 'Maestria: La reliquia'],
+    // ---- engine port
+    ['Go!', '¡Ya!', 'Los!', 'Partez !', 'Já!', 'Via!'],
+    ['Open Options', 'Abrir opciones', 'Optionen öffnen', 'Ouvrir les options', 'Abrir opções', 'Apri opzioni'],
+    ['Sound, graphics, language, haptics, reduced motion, high contrast and larger text are in the StarHermit Options.', 'El sonido, los gráficos, el idioma, la vibración, el movimiento reducido, el alto contraste y el texto grande están en las opciones de StarHermit.', 'Ton, Grafik, Sprache, Vibration, reduzierte Bewegung, hoher Kontrast und größere Schrift findest du in den StarHermit-Optionen.', 'Le son, les graphismes, la langue, les vibrations, les animations réduites, le contraste élevé et le texte agrandi se trouvent dans les options StarHermit.', 'Som, gráficos, idioma, vibração, movimento reduzido, alto contraste e texto maior ficam nas opções do StarHermit.', 'Audio, grafica, lingua, vibrazione, movimento ridotto, contrasto elevato e testo più grande sono nelle opzioni StarHermit.']
   ];
 
   var COLS = ['es-419', 'de-DE', 'fr-FR', 'pt-BR', 'it-IT'];
@@ -324,7 +309,6 @@
   // es-ES: Spain Spanish wording.
   T['es-ES'] = {
     'Settings': 'Ajustes',
-    'Relic Run needs WebGL to render the ruins. Your browser or device blocked it. You can still browse menus, but a run needs a WebGL-capable browser.': 'Relic Run necesita WebGL para mostrar las ruinas. Tu navegador o dispositivo lo ha bloqueado. Aún puedes ver los menús, pero una carrera necesita un navegador compatible con WebGL.',
     'You reached the relic gate!': '¡Has llegado a la puerta de la reliquia!',
     'The vines brought you down.': 'Las lianas te han derribado.',
     'You fell into the ruins.': 'Te has caído en las ruinas.',
@@ -339,4 +323,4 @@
   };
 
   root.RR_STRINGS = T;
-})(typeof self !== 'undefined' ? self : this);
+})(globalThis);

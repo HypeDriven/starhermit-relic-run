@@ -1,0 +1,102 @@
+/* Relic Run — the browser build's index.html <style> rewritten class-based for
+   the engine's UI (`npm run css` converts it into assets/ui-style.json).
+   Element selectors, ids, attribute selectors and @media do not convert:
+   every widget names its classes and the breakpoints are layouts picked in
+   native/screens.ts (rails from 1024 px, portrait phones up to 700 px wide,
+   short landscape up to 500 px tall). High contrast (the old
+   html.high-contrast palette), larger text and reduced motion are the
+   runtime's options; native/style.ts swaps the tokens. */
+
+:root {
+  --bg: #0e1a14;
+  --panel: #16241c;
+  --panel2: #1d2f24;
+  --ink: #eef3e8;
+  --muted: #9fb3a4;
+  --accent: #e8c15a;
+  --accentink: #241a05;
+  --danger: #ff8c6a;
+  --ok: #7fe3b0;
+  --focus: #9fd8ff;
+  --edge: #2a3c30;
+  --edge2: #3a4f41;
+  --hud: #0e1a14d1;
+  --wash: #0a120deb;
+}
+
+* { box-sizing: border-box; }
+
+/* ------------------------------------------------------------- chrome */
+.statusbar { background: var(--panel); padding: 6px 14px; border-radius: 0; }
+.sb-title { color: var(--ink); font-size: 15px; font-weight: 700; }
+.sb-text { color: var(--muted); font-size: 15px; font-variant-numeric: tabular-nums; }
+.sb-text-small { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.rail { background: var(--panel); padding: 14px; border-radius: 0; }
+.rail-left { background: var(--panel); padding: 14px; border-radius: 0; border-right: 1px solid var(--edge); }
+.rail-right { background: var(--panel); padding: 14px; border-radius: 0; border-left: 1px solid var(--edge); }
+.rail-heading { color: var(--ink); font-size: 17px; font-weight: 700; }
+.rail-text { color: var(--muted); font-size: 16px; }
+
+/* ------------------------------------------------------------- screens */
+.menu-wash { background: var(--wash); border-radius: 0; }
+.card { background: var(--panel); border: 1px solid var(--edge); border-radius: 14px; padding: 20px; }
+.h1 { color: var(--ink); font-size: 32px; font-weight: 700; }
+.h2 { color: var(--ink); font-size: 24px; font-weight: 700; }
+.h3 { color: var(--ink); font-size: 19px; font-weight: 700; }
+.text { color: var(--ink); font-size: 16px; }
+.muted { color: var(--muted); font-size: 16px; }
+.muted-small { color: var(--muted); font-size: 14px; }
+.item { background: var(--panel2); border: 1px solid var(--edge); border-radius: 10px; padding: 10px 14px; }
+.item-name { color: var(--ink); font-size: 16px; font-weight: 600; }
+.item-sub { color: var(--muted); font-size: 15px; }
+.badge { background: var(--edge); color: var(--ink); font-size: 13px; padding: 2px 8px; border-radius: 20px; }
+.badge-done { background: var(--ok); color: #006622; font-size: 13px; padding: 2px 8px; border-radius: 20px; }
+.grid-key { color: var(--ink); font-size: 16px; }
+.grid-value { color: var(--ink); font-size: 16px; font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------- buttons */
+.btn {
+  min-height: 44px; min-width: 44px; padding: 10px 18px; border-radius: 10px; border: 1px solid var(--accent);
+  background: var(--accent); color: var(--accentink); font-size: 16px; text-align: center;
+}
+.btn:hover { background: #f0cf72; }
+.btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.btn:disabled { opacity: 0.45; }
+.btn-play {
+  min-height: 44px; padding: 16px 22px; border-radius: 10px; border: 1px solid var(--accent);
+  background: var(--accent); color: var(--accentink); font-size: 21.6px; text-align: center;
+}
+.btn-play:hover { background: #f0cf72; }
+.btn-play:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.btn-secondary {
+  min-height: 44px; min-width: 44px; padding: 10px 18px; border-radius: 10px; border: 1px solid var(--edge2);
+  background: var(--panel2); color: var(--ink); font-size: 16px; text-align: center;
+}
+.btn-secondary:hover { background: #26392d; }
+.btn-secondary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.btn-secondary:disabled { opacity: 0.45; }
+.btn-danger {
+  min-height: 44px; min-width: 44px; padding: 10px 18px; border-radius: 10px; border: 1px solid var(--danger);
+  background: var(--danger); color: var(--accentink); font-size: 16px; text-align: center;
+}
+.btn-danger:hover { background: #ffa588; }
+.btn-danger:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.btn-tray {
+  min-height: 44px; min-width: 44px; padding: 12px 20px; border-radius: 10px; border: 1px solid var(--edge2);
+  background: var(--panel2); color: var(--ink); font-size: 17.6px; text-align: center;
+}
+.btn-tray:hover { background: #26392d; }
+.btn-tray:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.btn-tray:disabled { opacity: 0.45; }
+
+/* ------------------------------------------------------------- run */
+.hud-box { background: var(--hud); border-radius: 10px; padding: 8px 12px; }
+.hud-text { color: var(--ink); font-size: 16px; font-variant-numeric: tabular-nums; }
+.hud-text-small { color: var(--ink); font-size: 13.6px; font-variant-numeric: tabular-nums; }
+.mirror { background: var(--hud); border-radius: 10px; padding: 8px 12px; }
+.mirror-text { color: var(--ink); font-size: 14.4px; }
+.countdown { color: var(--accent); font-size: 80px; font-weight: 700; text-shadow: 0 2px 18px #000000; }
+.countdown-plain { color: var(--accent); font-size: 80px; font-weight: 700; }
+.toast { background: var(--panel2); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 16px; }
+.toast-invalid { background: var(--panel2); border: 1px solid var(--danger); border-radius: 10px; padding: 10px 16px; }
+.toast-text { color: var(--ink); font-size: 16px; }

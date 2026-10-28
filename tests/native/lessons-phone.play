@@ -1,0 +1,31 @@
+# Learn on a phone (390 × 844 at DPR 3) by touch (tools/gen-plays.mjs; generated: do not edit): Choosing the Path
+# with the tray buttons (◀ Left at the fork), then Leaping the Gaps with Jump ▲ taps, to their lesson results.
+# viewport 390x844@3
+until 300 Relic Run
+frames 30
+save title
+touch =Learn
+until 60 Learn the ruins
+frames 10
+save learn
+touch Start — Choosing the Path
+frames 180
+save lesson-run
+frames 135
+touch =◀ Left
+until 900 Run complete
+frames 20
+expect Lesson complete.
+save lesson-1
+touch =Next recommended
+frames 211
+touch =Jump ▲
+frames 247
+touch =Jump ▲
+frames 121
+touch =Jump ▲
+until 900 Run complete
+frames 20
+expect Lesson complete.
+expect =409
+save lesson-2

@@ -1,6 +1,6 @@
 // Rules engine tests: actions, invalid reasons, scoring, terminals,
 // serialization, fuzz safety.
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from './expect.mjs';
 import * as R from '../src/rules.js';
 
 function runSteps(s, n) { for (let i = 0; i < n && !s.terminal; i++) R.step(s); }

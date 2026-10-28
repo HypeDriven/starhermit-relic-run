@@ -1,0 +1,68 @@
+# Menus on a desktop window (tools/gen-plays.mjs; generated: do not edit): Help with the effective keys, Settings
+# (the colorblind-safe palette on), Profile, Friends & scores, the Daily screen, a Practice run paused by Escape,
+# Resume, the Hint key, then left to end in the results, and back to the title.
+until 300 Relic Run
+frames 30
+click =Help
+until 60 How to play
+frames 10
+expect ArrowLeft / A
+save help
+click =Back
+until 60 Daily Challenge
+frames 10
+click =Settings
+until 60 Open Options
+frames 10
+click =Colorblind-safe palette
+frames 10
+save settings
+click =Back
+until 60 Daily Challenge
+frames 10
+click =Profile
+until 60 Student of the Ruins
+frames 10
+save profile
+click =Back
+until 60 Daily Challenge
+frames 10
+click =Friends
+until 60 Friends & scores
+frames 10
+expect Offline - showing locally saved records.
+save friends
+click =Back
+until 60 Daily Challenge
+frames 10
+click =Daily Challenge
+until 60 Same course for every player today
+frames 10
+save daily
+click =Back
+until 60 Choose a mode
+frames 10
+click Open — Practice
+until 60 Unranked. Restart freely
+frames 10
+click Run — Easy
+frames 148
+key KeyH 1
+frames 1
+save practice-hint
+key Escape 1
+until 60 Leave run
+frames 10
+save paused
+click =Resume
+until 2400 Run complete
+frames 20
+expect =Practice run - unranked.
+save practice-results
+click =Back to title
+until 60 Daily Challenge
+frames 10
+click =Profile
+until 60 Total runs
+frames 10
+save profile-after

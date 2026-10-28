@@ -1,0 +1,188 @@
+# Journey stages 1 and 2 played to the relic gate by the bot (tools/gen-plays.mjs; generated: do not edit),
+# by keys on a desktop window with the rails; Next recommended starts stage 2; the list then shows 3 unlocked.
+# viewport 1366x768@1
+until 300 Relic Run
+frames 30
+save title
+click =Play
+until 60 Choose a mode
+frames 10
+click Open — Journey
+until 60 stages finished
+frames 10
+save journey-list
+click Run — 1. First Steps
+frames 187
+key KeyA 1
+frames 8
+key KeyD 1
+frames 2
+key KeyD 1
+frames 8
+key KeyA 1
+frames 2
+key KeyA 1
+frames 22
+key KeyD 1
+frames 14
+key KeyD 1
+frames 6
+key KeyA 1
+frames 22
+key KeyD 1
+frames 56
+key KeyA 1
+frames 2
+key KeyA 1
+frames 86
+key KeyD 1
+frames 2
+key KeyD 1
+frames 8
+key KeyA 1
+frames 2
+key KeyA 1
+frames 18
+key KeyD 1
+frames 2
+key KeyD 1
+frames 8
+key KeyA 1
+frames 28
+key KeyD 1
+frames 2
+key KeyA 1
+frames 2
+key KeyD 1
+frames 4
+key KeyA 1
+frames 2
+key KeyA 1
+frames 8
+key KeyD 1
+frames 12
+key KeyD 1
+frames 36
+key KeyA 1
+frames 38
+key KeyA 1
+frames 22
+key KeyD 1
+frames 12
+key KeyA 1
+frames 2
+key KeyA 1
+frames 8
+key KeyD 1
+frames 2
+key KeyD 1
+frames 14
+key KeyA 1
+frames 2
+key KeyA 1
+frames 42
+key KeyD 1
+frames 2
+key KeyD 1
+frames 22
+key KeyA 1
+frames 2
+key KeyA 1
+save stage-1-run
+until 1200 Run complete
+frames 20
+expect You reached the relic gate!
+expect =1989
+save stage-1
+click =Next recommended
+frames 167
+key KeyA 1
+frames 14
+key KeyD 1
+frames 6
+key KeyW 1
+frames 32
+key KeyD 1
+frames 12
+key KeyA 1
+frames 2
+key KeyA 1
+frames 10
+key KeyW 1
+frames 22
+key KeyD 1
+frames 46
+key KeyD 1
+frames 12
+key KeyA 1
+frames 8
+key KeyD 1
+frames 12
+key KeyA 1
+frames 2
+key KeyA 1
+frames 12
+key KeyD 1
+frames 2
+key KeyD 1
+frames 10
+key KeyA 1
+frames 2
+key KeyD 1
+frames 22
+key KeyA 1
+frames 2
+key KeyA 1
+frames 14
+key KeyD 1
+frames 2
+key KeyD 1
+frames 36
+key KeyA 1
+frames 2
+key KeyA 1
+frames 14
+key KeyW 1
+frames 16
+key KeyD 1
+frames 28
+key KeyA 1
+frames 32
+key KeyD 1
+frames 6
+key KeyW 1
+frames 22
+key KeyA 1
+frames 2
+key KeyA 1
+frames 14
+key KeyW 1
+frames 18
+key KeyD 1
+frames 2
+key KeyD 1
+frames 8
+key KeyA 1
+frames 8
+key KeyW 1
+frames 36
+key KeyA 1
+frames 22
+key KeyD 1
+frames 2
+key KeyA 1
+frames 28
+key KeyD 1
+until 1200 Run complete
+frames 20
+expect You reached the relic gate!
+expect =1814
+save stage-2
+click =Back to title
+until 60 Daily Challenge
+frames 10
+click =Journey
+until 60 2 of 40 stages finished
+frames 10
+expect Run — 3. Cracked Flagstones
+save journey-unlocked

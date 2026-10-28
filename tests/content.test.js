@@ -1,6 +1,6 @@
 // Content tests: registry shape, validator over all stages/lessons/challenges,
 // daily seed determinism and immutability.
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from './expect.mjs';
 import * as C from '../src/content.js';
 import * as R from '../src/rules.js';
 

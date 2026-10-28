@@ -1,20 +1,21 @@
 {
   "name": "relic-run",
   "version": "1.0.0",
-  "description": "Relic Run - branching runner through overgrown ruins",
+  "private": true,
   "type": "module",
+  "description": "Relic Run - branching runner through overgrown ruins, on the StarHermit engine.",
   "scripts": {
-    "test": "node node_modules/vitest/vitest.mjs run",
-    "test:e2e": "node tests/e2e.mjs",
-    "smoke": "node tests/e2e.mjs",
-    "start": "node server.js"
+    "test": "npm run test:unit && npm run test:native",
+    "test:unit": "node --test tests/*.test.js",
+    "test:native": "node tests/native.mjs",
+    "test:browser": "node tools/browser-play.mjs .",
+    "package": "node tools/package-web.mjs",
+    "css": "node tools/css.mjs",
+    "plays": "node tools/gen-plays.mjs",
+    "bake": "node tools/bake-textures.mjs"
   },
-  "keywords": [],
-  "author": "",
   "license": "PolyForm-Noncommercial-1.0.0",
-  "dependencies": {
-    "puppeteer-core": "^25.9.0",
-    "three": "^0.185.1",
-    "vitest": "^3.0.5"
+  "devDependencies": {
+    "playwright-core": "^1.57.0"
   }
 }
