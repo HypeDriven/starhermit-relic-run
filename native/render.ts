@@ -8,22 +8,22 @@
 // and the runner — body, head and, detailed, satchel and lantern — with the
 // damped chase camera, the barrier shake and the slow glide behind the menus.
 //
-// From three.js r185: punctual light intensities are ÷ π (the engine's light
-// units); the RoomEnvironment reflections are r185's (the renderer's room,
+// From three.js r185: punctual light intensities are the page's (minor 23+);
+// the RoomEnvironment reflections are r185's (the renderer's room,
 // moved down 3.5 m as r183+ does) at the old environmentIntensity 0.4; the sky
 // ShaderMaterial is WGSL and the foliage's onBeforeCompile wind a material
 // hook; the GPU-animated Points motes are instanced camera-facing quads (Points
 // take no shaders) of the same size and motion; the post chain (GTAOPass,
 // UnrealBloomPass threshold 0.9, the grade shader, FXAA / SMAA / MSAA) is
 // renderer.ao / bloom / grade / antialias; the key light's fitted 28 m shadow
-// box is the engine's view-fitted shadow (distance); the canvas-painted stone,
+// box is the page's own, snapped to texels; the canvas-painted stone,
 // block and moss textures are baked PNGs (tools/bake-textures.mjs). The canvas
 // between the old rails is a view offset of the window. Cosmetic randomness
 // never touches the rules.
 import {
   ACESFilmicToneMapping, AdditiveBlending, BackSide, BoxGeometry, CapsuleGeometry, Color, ConeGeometry, CylinderGeometry, DirectionalLight, DynamicDrawUsage,
   FogExp2, Group, HemisphereLight, InstancedMesh, Matrix4, Mesh, MeshLambertMaterial, MeshPhysicalMaterial, MeshStandardMaterial,
-  OctahedronGeometry, PerspectiveCamera, PlaneGeometry, PMREMGenerator, Quaternion, RepeatWrapping, RoomEnvironment, ShaderMaterial,
+  OctahedronGeometry, PerspectiveCamera, OrthographicCamera, PlaneGeometry, PMREMGenerator, Quaternion, RepeatWrapping, RoomEnvironment, ShaderMaterial,
   SphereGeometry, SRGBColorSpace, TextureLoader, Vector3, Vector4, renderer, scene, type Material, type MaterialHooks, type Object3D, type Texture,
 } from "starhermit:scene";
 import { Rules, type State, type Theme, type Cell } from "./game.ts";
@@ -265,19 +265,22 @@ function build(): void {
   scene.environmentIntensity = 0.4;
 
   // lighting: warm key (its shadow follows the runner) + hemisphere fill (+ cool rim when detailed)
-  world.add(new HemisphereLight(th.sky, th.stoneDark, (det ? 0.75 : 0.9) / PI));
-  const key = new DirectionalLight(0xffe6b8, 2.2 / PI);
+  world.add(new HemisphereLight(th.sky, th.stoneDark, det ? 0.75 : 0.9));
+  const key = new DirectionalLight(0xffe6b8, 2.2);
   key.position.set(-6, 10, -4);
   key.castShadow = shadowsOn;
   if (shadowsOn) key.shadow.mapSize = q.shadows;
-  // the old fitted box (28 m around the stretch ahead, near 1, far 50) is the engine's view distance
-  key.shadow.distance = 36;
+  // the page's fitted box: 28 m around the stretch ahead, near 1, far 50
+  const cam = key.shadow.camera as OrthographicCamera;
+  cam.left = -SHADOW_EXTENT; cam.right = SHADOW_EXTENT; cam.top = SHADOW_EXTENT; cam.bottom = -SHADOW_EXTENT;
+  cam.near = 1; cam.far = 50;
+  cam.updateProjectionMatrix();
   key.shadow.bias = -0.0006;
-  key.shadow.normalBias = 1.5;
+  key.shadow.normalBias = 0.03;
   world.add(key, key.target);
   keyLight = key;
   if (det) {
-    const rim = new DirectionalLight(0xbfe0ff, 0.45 / PI);
+    const rim = new DirectionalLight(0xbfe0ff, 0.45);
     rim.position.set(7, 5, 12);
     world.add(rim);
   }
@@ -548,9 +551,13 @@ function buildMotes(): void {
   world.add(im);
 }
 
+const SHADOW_EXTENT = 14;
 function placeKeyLight(focusZ: number): void {
   if (!keyLight) return;
-  const zc = Math.round(focusZ + 9);
+  // snapped to whole texels so the shadows do not shimmer as the camera advances
+  const ms = keyLight.shadow.mapSize;
+  const texel = (SHADOW_EXTENT * 2) / ((typeof ms === "number" ? ms : ms.x) || 1024);
+  const zc = Math.round((focusZ + 9) / texel) * texel;
   keyLight.target.position.set(0, 0, zc);
   keyLight.position.set(-6, 10, zc - 4);
 }

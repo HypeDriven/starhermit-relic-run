@@ -105,7 +105,7 @@ collected), twin fork arrows and orange risk-route strips, crumbling pillars, bu
 the wind (a vertex hook), fireflies (instanced camera-facing quads with the old GPU motion), and the
 runner (body, head; satchel and lantern when detailed) under a warm key light with a hemisphere fill and
 a cool rim, followed by the damped chase camera with a shake on barrier hits; behind the menus the camera
-glides along the course. Punctual lights are ÷ π (engine light units); the RoomEnvironment is r185's
+glides along the course. Punctual lights are the page's intensities; the RoomEnvironment is r185's
 (renderer room lowered 3.5 m) at environmentIntensity 0.4.
 
 Per graphics tier (`native/quality.ts`, the old presets): Low — Lambert, sparse foliage, plain colours,
