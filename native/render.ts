@@ -212,8 +212,10 @@ function applyPost(): void {
   renderer.bloom = look.bloom ? { strength: 0.55, radius: 0.4, threshold: 0.9, resolution: look.budget.bloomRes } : null;
   // GradeShader on the linear HDR before the output: a 0.22 S-curve, 1.1 saturation, cool-green shadows / warm highlights, the 0.24 vignette
   renderer.grade = look.grade ? {
-    space: "linear", contrast: 0.22, saturation: 1.1, shadows: [0.95, 1.0, 1.02], highlights: [1.04, 1.01, 0.95], split: [0.2, 0.8],
+    space: "linear", contrastCurve: "s", contrast: 0.22, saturation: 1.1, shadows: [0.95, 1.0, 1.02], highlights: [1.04, 1.01, 0.95], split: [0.2, 0.8],
     vignette: { amount: 0.24, inner: 0.38, outer: 0.9 },
+    levels: [0.975, 0.018], // s * 0.975 + 0.018
+    overRange: "keep", // minor 29: mix(c, s + max(c - 1, 0), amount) as the page's grade
   } : null;
   renderer.antialias = look.antialias;
 }
