@@ -3,8 +3,8 @@
 Relic Run is a branching runner through lush ancient ruins reclaimed by vegetation. The runner moves
 forward on its own along a three-lane stone causeway: the player changes lanes to gather relic fragments,
 turns at forks (left: the safe route; right: the risk route where fragments count double), jumps the gaps
-and slides under the vine barriers. It is a StarHermit engine **script game** (engine 1.29.0, host API
-1.29, `engine.minor=31`), played natively by the StarHermit client and in browsers by the engine's web
+and slides under the vine barriers. It is a StarHermit engine **script game** (engine 1.30.0, host API
+1.29, `engine.minor=32`), played natively by the StarHermit client and in browsers by the engine's web
 runtime from one package.
 
 ## Files
