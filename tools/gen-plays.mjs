@@ -166,7 +166,12 @@ export function dailyPlay(nowMs) {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const out = join(root, 'tests', 'native');
-  const files = { 'journey.play': journeyPlay(), 'lessons-phone.play': lessonsPhonePlay(), 'challenge-landscape.play': challengeLandscapePlay(), 'menus.play': menusPlay() };
+  // The graphics-level bench (tools/engine-tier-bench.mjs): its window steps the rules by wall time and a run can't pause in its countdown, so
+  // the measured 600 frames are the countdown, the run up to its first crash, then the results over the world (foliage, motes, wind, post).
+  const tierBench = ['# Graphics-level bench (tools/gen-plays.mjs; generated: do not edit): Practice Easy with no input, 600 frames measured from its countdown.',
+    'until 300 Relic Run', 'frames 30', 'click =Play', 'until 60 Choose a mode', 'frames 10', 'click Open — Practice', 'until 60 Unranked. Restart freely', 'frames 10',
+    'click Run — Easy', 'frames 5', 'measure start', 'frames 600', 'measure stop'];
+  const files = { 'tier-bench.play': tierBench, 'journey.play': journeyPlay(), 'lessons-phone.play': lessonsPhonePlay(), 'challenge-landscape.play': challengeLandscapePlay(), 'menus.play': menusPlay() };
   for (const [name, lines] of Object.entries(files)) {
     writeFileSync(join(out, name), lines.join('\n') + '\n');
     console.log(`tests/native/${name}: ${lines.length} lines`);

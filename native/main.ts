@@ -23,8 +23,8 @@
 // step, before that step's tick, as the browser build applied it between
 // ticks. The runner is drawn between ticks by the frame's interpolation.
 import "./i18n.ts";
-import { clipboard, frame, onFixedUpdate, onPreferencesChange, onRender, onResume, onStart, onSuspend, onUpdate, preferences, setFixedRate } from "starhermit:engine";
-import { onAction, onPointerButton, onTouch, primaryPointer, vibrate } from "starhermit:input";
+import { levelSettings, clipboard, frame, onFixedUpdate, onPreferencesChange, onRender, onResume, onStart, onSuspend, onUpdate, preferences, setFixedRate } from "starhermit:engine";
+import { onAction, onGesture, primaryPointer, vibrate } from "starhermit:input";
 import * as ui from "starhermit:ui";
 import { onSessionEnded, requestSignIn } from "starhermit:platform";
 import { Content, Progress, Rules, Session, type Action, type Breakdown, type Challenge, type Daily, type GenOpts, type Lesson, type Snapshot, type Stage, type Terminal } from "./game.ts";
@@ -428,8 +428,8 @@ function onTerminal(terminal: Terminal): void {
 export function leaderboardLine(): string | null {
   const r = app.lb;
   if (!r) return null;
-  if (r === "posting") return S("lbPosting");
-  return !r.posted ? S("lbNotPosted") : r.rank ? S("lbRank", { rank: r.rank }) : S("lbPosted");
+  if (r === "posting") return S("leaderboardPosting");
+  return !r.posted ? S("leaderboardNotPosted") : r.rank ? S("leaderboardRank", { rank: r.rank }) : S("leaderboardPosted");
 }
 export function resetLessons(): void {
   click();
@@ -444,7 +444,7 @@ export function copyInvite(): void {
   const link = platform.inviteLink();
   if (!link) return;
   try { clipboard.writeText(link); app.accountNote = () => S("inviteCopied"); }
-  catch { app.accountNote = () => S("inviteLink", { url: link }); }
+  catch { app.accountNote = () => S("inviteLink", { link }); }
 }
 export function signIn(): void { click(); void requestSignIn().catch(() => undefined); }
 
@@ -453,28 +453,10 @@ export function signIn(): void { click(); void requestSignIn().catch(() => undef
 export const uiRects: { x: number; y: number; width: number; height: number }[] = [];
 /** The stage (window pixels): the gesture surface. */
 export const stageRect = { x: 0, y: 0, width: 0, height: 0 };
-interface Press { id: number; x: number; y: number; t: number }
-const downs = new Map<number, Press>();
 const gestures: { dx: number; dy: number; dt: number; x: number; y: number }[] = [];
-let lastTouch = -1e9;
-onTouch((e) => {
-  lastTouch = frame().time;
-  if (e.control) return;
-  if (e.phase === "start") downs.set(e.id, { id: e.id, x: e.x, y: e.y, t: frame().time });
-  else if (e.phase === "end") {
-    const d = downs.get(e.id);
-    downs.delete(e.id);
-    if (d) gestures.push({ dx: e.x - d.x, dy: e.y - d.y, dt: frame().time - d.t, x: d.x, y: d.y });
-  } else if (e.phase === "cancel") downs.delete(e.id);
-});
-onPointerButton((e) => {
-  if (e.button !== 0 || frame().time - lastTouch < 0.6) return;
-  if (e.pressed) downs.set(-1, { id: -1, x: e.x, y: e.y, t: frame().time });
-  else {
-    const d = downs.get(-1);
-    downs.delete(-1);
-    if (d) gestures.push({ dx: e.x - d.x, dy: e.y - d.y, dt: frame().time - d.t, x: d.x, y: d.y });
-  }
+onGesture!((e) => {
+  if (e.type !== "tap" && (e.type !== "dragEnd" || e.cancelled)) return;
+  gestures.push({ dx: e.x - e.startX, dy: e.y - e.startY, dt: e.held, x: e.startX, y: e.startY });
 });
 /** bindPointer: swipes on the course (tap = jump), decided once the frame's UI is built. */
 function gestureInput(): void {
@@ -519,24 +501,20 @@ onAction((e) => {
 });
 export function hintPressed(): void { ui.setFocus(null); showHint(); }
 
-const pendingActs: (() => void)[] = [];
-/** A widget's press, run once the frame's UI is built (state changes mid-build would break later widgets). */
-export function later(fn: () => void): void { pendingActs.push(fn); }
-
 // ------------------------------------------------------------------ boot and lifecycle
 let lookKey = "";
 function applyLook(): void {
   const f = frame();
-  const k = `${f.quality}:${f.levelIndex}`;
-  if (k === lookKey) return;
-  lookKey = k;
-  render.applyLook(lookFor(f.quality, f.levelIndex));
+  if (f.level === lookKey) return;
+  lookKey = f.level;
+  render.applyLook(lookFor(levelSettings(f.level)));
 }
 function applyOptions(): void { render.setColorblind(platform.options.colorblind); }
 
 onStart(() => {
   setFixedRate(60);
   initStyles();
+  audio.loadSfx();
   platform.initPlatform();
   render.setReducedMotion(preferences().reducedMotion);
   applyOptions();
@@ -615,7 +593,6 @@ onUpdate((dt) => {
 onRender(() => {
   uiRects.length = 0;
   drawScreens();
-  for (const fn of pendingActs.splice(0)) fn();
   gestureInput();
   if (app.sess && app.machine !== "title") {
     const frac = app.machine === "active" ? Math.min(1, app.sub / stepsPerTick()) : 0;

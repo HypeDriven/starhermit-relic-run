@@ -1,0 +1,14 @@
+# Graphics-level bench (tools/gen-plays.mjs; generated: do not edit): Practice Easy with no input, 600 frames measured from its countdown.
+until 300 Relic Run
+frames 30
+click =Play
+until 60 Choose a mode
+frames 10
+click Open — Practice
+until 60 Unranked. Restart freely
+frames 10
+click Run — Easy
+frames 5
+measure start
+frames 600
+measure stop

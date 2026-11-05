@@ -21,7 +21,7 @@ runtime from one package.
 | `native/i18n.ts`, `native/style.ts`, `native/game.ts` | Strings, the UI style sheet, typed facade over the rules. |
 | `src/rules.js`, `src/session.js`, `src/content.js` | Rules, session (command ids, hashes, snapshots), content registry and validator — pure ES modules, unchanged from the browser build. |
 | `src/progress.js` | The stored progress: normalize, merge, achievements, the browser build's cloud slot and settings keys. |
-| `src/strings.js`, `src/platform-i18n.js` | Translations (nine locales). |
+| `assets/strings.json` | Translations (nine locales, on the engine's `strings`; account lines are its `starhermit.*`). |
 | `assets/textures/*.png` | Stone tile, block and moss textures baked from the browser build's canvas painters (`npm run bake`). |
 | `tools/ui-style.css` → `assets/ui-style.json` | The style sheet, converted with `npm run css`. |
 | `sfx/*.opus` | The authored one-shots (`sfx/manifest.md`). |
@@ -109,10 +109,10 @@ glides along the course. Punctual lights are the page's intensities; the RoomEnv
 (renderer room lowered 3.5 m) at environmentIntensity 0.4.
 
 Per graphics tier (`native/quality.ts`, the old presets): Low — Lambert, sparse foliage, plain colours,
-MSAA, no shadows or post; Balanced — standard materials, textures, sky dome, room reflections, 1024
+no anti-aliasing, shadows or post; Balanced — standard materials, textures, sky dome, room reflections, 1024
 shadows, bloom, grade, FXAA, normal foliage, some fireflies, wind; High — clear-coated relics, bump maps,
 2048 shadows, GTAO, SMAA, dense foliage, all fireflies; Ultra — 512 px textures, 4096 shadows, full GTAO,
-MSAA, 1.5× segments. Fireflies scale with the level within a tier. The colorblind-safe palette turns the
+MSAA, 1.5× segments. Shadows, AO, bloom, grade and anti-aliasing are the level's (`levelSettings()`). Fireflies scale with the level within a tier. The colorblind-safe palette turns the
 relics bright cyan.
 
 ## Audio
@@ -129,8 +129,8 @@ music bus. Volumes, mute, haptics and the voice limit are the runtime's Options.
   build's slot (its JSON profile under `game:<slug>`) is read as a foreign save, merged once and replaced.
 - Game options (left-handed layout, colorblind-safe palette, timing assistance) are engine settings; the
   browser build's values in the account's settings KV are adopted, then its keys removed.
-- Signed in, a finished Journey, Daily or Challenge run posts its total through `score-script.js` (a
-  practice session's `result` message) and the results show the rank on the `high-score` board.
+- Signed in, a finished Journey, Daily or Challenge run posts its total through `score-script.js`
+  (`leaderboards.submitScore`) and the results show the rank on the `high-score` board.
   Achievements are local progress, as before.
 - Invite a friend copies the invite link; Sign in opens the platform's sign-in.
 

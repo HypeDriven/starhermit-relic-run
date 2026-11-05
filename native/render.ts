@@ -203,13 +203,13 @@ function applyPost(): void {
     keyLight.castShadow = look.shadows > 0;
     if (look.shadows > 0) keyLight.shadow.mapSize = look.shadows;
   }
-  const hi = look.ao === "high";
-  renderer.ao = look.ao === "off" ? null : {
-    blendIntensity: 0.7, radius: 0.9, distanceExponent: 1.5, thickness: 1.5, scale: 1.0, samples: hi ? 16 : 8, resolution: look.budget.aoRes,
-    denoise: { lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: hi ? 6 : 4, rings: 2, samples: hi ? 16 : 8 },
+  const ao = look.ao, hi = !!ao && ao.resolution >= 1; // the engine's AO quality: resolution < 1 = "on", ≥ 1 = "high"
+  renderer.ao = ao && {
+    blendIntensity: 0.7, radius: 0.9, distanceExponent: 1.5, thickness: 1.5, scale: 1.0, samples: ao.samples, resolution: ao.resolution,
+    denoise: { lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: hi ? 6 : 4, rings: 2, samples: ao.denoiseSamples },
   };
   // high threshold: only relics, the lantern, fork markers and fireflies bloom
-  renderer.bloom = look.bloom ? { strength: 0.55, radius: 0.4, threshold: 0.9, resolution: look.budget.bloomRes } : null;
+  renderer.bloom = look.bloom === null ? null : { strength: 0.55, radius: 0.4, threshold: 0.9, resolution: look.bloom };
   // GradeShader on the linear HDR before the output: a 0.22 S-curve, 1.1 saturation, cool-green shadows / warm highlights, the 0.24 vignette
   renderer.grade = look.grade ? {
     space: "linear", contrastCurve: "s", contrast: 0.22, saturation: 1.1, shadows: [0.95, 1.0, 1.02], highlights: [1.04, 1.01, 0.95], split: [0.2, 0.8],
@@ -479,7 +479,7 @@ function build(): void {
     vary(veg, k, 0.75, 1.15, 0.06);
   }
   veg.count = nVeg;
-  veg.castShadow = q.shadows >= 4096;
+  veg.castShadow = q.preset === "ultra"; // art: only Ultra (a High level with a 4096 map stays without)
   world.add(veg);
 
   const nTrees = Math.floor(nVeg / 3);

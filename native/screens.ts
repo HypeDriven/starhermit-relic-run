@@ -12,7 +12,7 @@
 // portrait phone (≤ 700 px wide: stats and Pause above a full-width
 // objective, the tray buttons sharing the width) and short landscape (≤ 500
 // px tall: smaller status text, the tray at the end).
-import { frame, openMenu } from "starhermit:engine";
+import { afterRender, frame, openMenu } from "starhermit:engine";
 import { bindings } from "starhermit:input";
 import * as draw from "starhermit:draw";
 import * as ui from "starhermit:ui";
@@ -21,7 +21,7 @@ import { N, S, T } from "./i18n.ts";
 import * as platform from "./platform.ts";
 import * as render from "./render.ts";
 import {
-  app, backToTitle, challengeRun, click, command, copyInvite, hintPressed, idleProgressText, later, leaderboardLine, lessonRun, leaveRun,
+  app, backToTitle, challengeRun, click, command, copyInvite, hintPressed, idleProgressText, leaderboardLine, lessonRun, leaveRun,
   mirrorText, nextRecommended, open, openDaily, openFriends, openOverlay, overlayBack, pauseRun, practiceRun, progress, resetLessons,
   resumeRun, retry, runProgressText, touchOnly, signIn, stageRect, stageRun, startDaily, startRun, today, uiRects,
 } from "./main.ts";
@@ -36,15 +36,13 @@ interface Layout {
 const lastSize = new Map<string, number>();
 const RAIL = 250;
 function layoutNow(): Layout {
-  const f = frame();
-  const sc = ui.preferences().scale;
-  const sa = f.safeArea;
-  const lw = Math.max(1, (f.width - sa.left - sa.right) / sc), lh = Math.max(1, (f.height - sa.top - sa.bottom) / sc);
+  const v = ui.viewport!();
+  const lw = Math.max(1, v.width), lh = Math.max(1, v.height), sc = v.scale;
   const wide = lw >= 1024;
   const sbH = lastSize.get("statusbar") ?? 33;
   const sx = wide ? RAIL : 0;
   return {
-    lw, lh, sc, ox: sa.left, oy: sa.top, wide, portrait: lw <= 700 && lh > lw, short: lh <= 500 && lw > lh,
+    lw, lh, sc, ox: v.x * sc, oy: v.y * sc, wide, portrait: lw <= 700 && lh > lw, short: lh <= 500 && lw > lh,
     sx, sy: sbH, sw: lw - (wide ? 2 * RAIL : 0), sh: Math.max(1, lh - sbH),
   };
 }
@@ -63,7 +61,7 @@ function button(b: Btn, width: number | null = null): void {
     const inner = Math.max(20, width - 40);
     opts.content = () => { ui.style({ text: { align: "center" } }).paragraph(b.text, inner); };
   } else if (b.name) opts.content = () => { ui.label(b.text); };
-  if (ui.style(style, inline).id(b.id).button(b.name ?? b.text, opts) && fresh() && !b.disabled) later(b.act);
+  if (ui.style(style, inline).id(b.id).button(b.name ?? b.text, opts) && fresh() && !b.disabled) afterRender(b.act);
 }
 /** Text up to `width` wide: one label when it fits, else a paragraph. */
 function para(text: string, width: number, cls = "muted", id?: string, align: "start" | "center" = "start"): void {
@@ -446,7 +444,7 @@ function settingsScreen(w: number): void {
     const check = (key: "leftHanded" | "colorblind" | "timingAssist", text: string): void => {
       const cur = platform.options[key];
       const next = ui.id(`set-${key}`).checkbox(T(text), cur);
-      if (next !== cur) later(() => { platform.setOption(key, next); click(); });
+      if (next !== cur) afterRender(() => { platform.setOption(key, next); click(); });
     };
     heading("h3", T("Controls"), w);
     check("leftHanded", N("Left-handed layout"));
@@ -563,7 +561,7 @@ function runView(L: Layout): void {
         const opts: ui.ButtonOptions = {};
         const inline: ui.Style = L.portrait ? { width: portraitW, padding: { top: 10, bottom: 10, start: 4, end: 4 }, text: { size } } : {};
         if (ui.style("btn-tray", inline).id(`tray-${t.a}`).button(t.name, { ...opts, content: () => { ui.style({ text: { size: L.portrait ? size : 17.6 } }).label(t.text); } }) && fresh() && live) {
-          later(() => { ui.setFocus(null); command(t.a); });
+          afterRender(() => { ui.setFocus(null); command(t.a); });
         }
       }
     }, { width: L.sw, spacing: trayGap, justify: L.short ? "end" : "center", padding: 10 });
