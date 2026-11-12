@@ -1,3 +1,6 @@
+import { localizedStyle as __l10nStyle } from "./l10n/font.ts";
+// localization-runtime:attached
+import { openLocalizedOptions as __l10nOptions } from "./l10n/menu.ts";
 // The browser build's DOM shell (index.html + src/ui.js) as starhermit:ui,
 // built every frame over the ruins: the status bar (Relic Run, the player,
 // the mode, sync and network state, the UTC clock); on windows 1024 px and
@@ -12,7 +15,21 @@
 // portrait phone (≤ 700 px wide: stats and Pause above a full-width
 // objective, the tray buttons sharing the width) and short landscape (≤ 500
 // px tall: smaller status text, the tray at the end).
-import { afterRender, frame, openMenu } from "starhermit:engine";
+// The browser build's DOM shell (index.html + src/ui.js) as starhermit:ui,
+// built every frame over the ruins: the status bar (Relic Run, the player,
+// the mode, sync and network state, the UTC clock); on windows 1024 px and
+// wider the two rails (Objective, Progress, Next up; Actions, Status) with
+// the 3D stage between them; the menu screens over the stage behind their
+// wash (title, modes, Journey list, lessons, Practice, Challenges, Daily,
+// pause, results, help, settings, friends & scores, profile); and in a run
+// the HUD (objective, score · fragments · hearts · speed, Pause), the tray
+// (◀ Left, Jump ▲, Slide ▼, Right ▶; mirrored for the left-handed), the
+// "Ahead" hazard mirror, the countdown and the toasts. The old media queries
+// are layouts picked by the stage's logical size: rails from 1024 px, the
+// portrait phone (≤ 700 px wide: stats and Pause above a full-width
+// objective, the tray buttons sharing the width) and short landscape (≤ 500
+// px tall: smaller status text, the tray at the end).
+import { afterRender, frame } from "starhermit:engine";
 import { bindings } from "starhermit:input";
 import * as draw from "starhermit:draw";
 import * as ui from "starhermit:ui";
@@ -59,21 +76,21 @@ function button(b: Btn, width: number | null = null): void {
   const inline: ui.Style = width != null ? { width } : {};
   if (width != null && textWidth(b.text, style, "button") > width) {
     const inner = Math.max(20, width - 40);
-    opts.content = () => { ui.style({ text: { align: "center" } }).paragraph(b.text, inner); };
+    opts.content = () => { ui.style(__l10nStyle({ text: { align: "center" } })).paragraph(b.text, inner); };
   } else if (b.name) opts.content = () => { ui.label(b.text); };
-  if (ui.style(style, inline).id(b.id).button(b.name ?? b.text, opts) && fresh() && !b.disabled) afterRender(b.act);
+  if (ui.style(__l10nStyle(style), __l10nStyle(inline)).id(b.id).button(b.name ?? b.text, opts) && fresh() && !b.disabled) afterRender(b.act);
 }
 /** Text up to `width` wide: one label when it fits, else a paragraph. */
 function para(text: string, width: number, cls = "muted", id?: string, align: "start" | "center" = "start"): void {
   if (!text) return;
-  let u = ui.style(cls, { text: { align } });
+  let u = ui.style(__l10nStyle(cls), __l10nStyle({ text: { align } }));
   if (id) u = u.id(id);
   if (textWidth(text, cls) <= width) u.label(text);
   else u.paragraph(text, width);
 }
 function heading(cls: string, text: string, width: number, align: "start" | "center" = "start"): void {
-  if (textWidth(text, cls, "heading") <= width) ui.style(cls).heading(text);
-  else ui.style(cls, { text: { align } }).paragraph(text, width);
+  if (textWidth(text, cls, "heading") <= width) ui.style(__l10nStyle(cls)).heading(text);
+  else ui.style(__l10nStyle(cls), __l10nStyle({ text: { align } })).paragraph(text, width);
 }
 const gap = (h: number): void => { ui.widget("", { role: "none", size: { width: 1, height: h } }); };
 /** Window rectangle of a logical stage-relative box. */
@@ -134,14 +151,14 @@ function statusBar(L: Layout): void {
   const oneLine = widths(left) + widths(right) + 28 <= L.lw;
   const r = ui.place("statusbar", { anchor: "top-start", x: 0, y: 0 }, () => {
     const leftRow = (): void => {
-      ui.style("sb-title").id("sb-title").label("Relic Run");
-      if (name) ui.style(cls).id("sb-name").label(name);
-      if (mode) ui.style(cls).id("sb-mode").label(mode);
+      ui.style(__l10nStyle("sb-title")).id("sb-title").label("Relic Run");
+      if (name) ui.style(__l10nStyle(cls)).id("sb-name").label(name);
+      if (mode) ui.style(__l10nStyle(cls)).id("sb-mode").label(mode);
     };
     const rightRow = (): void => {
-      ui.style(cls).id("sb-sync").label(sync);
-      ui.style(cls).id("sb-net").label(net);
-      ui.style(cls).id("sb-clock").label(clock);
+      ui.style(__l10nStyle(cls)).id("sb-sync").label(sync);
+      ui.style(__l10nStyle(cls)).id("sb-net").label(net);
+      ui.style(__l10nStyle(cls)).id("sb-clock").label(clock);
     };
     if (oneLine) {
       ui.row("sb-row", () => { leftRow(); ui.spacer(); rightRow(); }, { width: L.lw, spacing: 16, align: "center", style: "statusbar", padding: { top: L.short ? 2 : 6, bottom: L.short ? 2 : 6, start: 14, end: 14 } });
@@ -242,14 +259,14 @@ function item(key: string, w: number, name: string, sub: string, right: { badge?
       para(sub, iw, "item-sub");
     }, { spacing: 2, width: iw });
     ui.spacer();
-    if (right.badge) ui.style(right.badge.done ? "badge-done" : "badge").label(right.badge.text);
+    if (right.badge) ui.style(__l10nStyle(right.badge.done ? "badge-done" : "badge")).label(right.badge.text);
     if (right.btn) button(right.btn);
   }, { style: "item", width: w, spacing: 10, align: "center" });
 }
 
 function titleScreen(cw: number): void {
   const w = Math.min(340, cw);
-  ui.style("h1").id("title-heading").heading("Relic Run");
+  ui.style(__l10nStyle("h1")).id("title-heading").heading("Relic Run");
   para(T("Run the overgrown ruins. Turn at forks, leap the gaps, slide the vines, gather the relics."), cw, "muted", "tagline", "center");
   gap(4);
   const list: Btn[] = [
@@ -372,8 +389,8 @@ function pauseScreen(w: number): void {
 function grid2(key: string, w: number, rows: [string, string | number][]): void {
   const c1 = Math.max(...rows.map(([k]) => textWidth(k, "grid-key"))) + 16;
   ui.column(key, () => rows.forEach(([k, v], i) => ui.row(`${key}-${i}`, () => {
-    ui.style("grid-key", { width: c1 }).label(k);
-    ui.style("grid-value").id(`${key}-${i}-v`).label(String(v));
+    ui.style(__l10nStyle("grid-key"), __l10nStyle({ width: c1 })).label(k);
+    ui.style(__l10nStyle("grid-value")).id(`${key}-${i}-v`).label(String(v));
   }, { spacing: 10, width: w })), { spacing: 10, width: w });
 }
 
@@ -452,12 +469,12 @@ function settingsScreen(w: number): void {
     check("colorblind", N("Colorblind-safe palette"));
     check("timingAssist", N("Timing assistance"));
     ui.row("set-tutorial-row", () => {
-      ui.style("text").label(T("Replay tutorials"));
+      ui.style(__l10nStyle("text")).label(T("Replay tutorials"));
       button({ id: "set-tutorial", text: T("Reset lessons"), act: resetLessons });
     }, { spacing: 16, align: "center" });
     gap(4);
     para(T("Sound, graphics, language, haptics, reduced motion, high contrast and larger text are in the StarHermit Options."), w, "muted", "options-note");
-    button({ id: "btn-options", text: T("Open Options"), act: () => { click(); openMenu(); } });
+    button({ id: "btn-options", text: T("Open Options"), act: () => { click(); __l10nOptions(); } });
   }, { spacing: 10, width: w });
   ui.row("settings-back", () => button({ id: "btn-back", text: T("Back"), act: overlayBack }), { spacing: 10 });
 }
@@ -491,7 +508,7 @@ function scoreRow(key: string, w: number, name: string, score: number): void {
   ui.row(key, () => {
     para(name, w - 120, "item-name");
     ui.spacer();
-    ui.style("grid-value").label(String(score));
+    ui.style(__l10nStyle("grid-value")).label(String(score));
   }, { style: "item", width: w, spacing: 10, align: "center" });
 }
 function profileScreen(w: number): void {
@@ -560,7 +577,7 @@ function runView(L: Layout): void {
         const size = L.portrait ? Math.max(12.8, Math.min(17.6, L.lw * 0.036)) : 17.6;
         const opts: ui.ButtonOptions = {};
         const inline: ui.Style = L.portrait ? { width: portraitW, padding: { top: 10, bottom: 10, start: 4, end: 4 }, text: { size } } : {};
-        if (ui.style("btn-tray", inline).id(`tray-${t.a}`).button(t.name, { ...opts, content: () => { ui.style({ text: { size: L.portrait ? size : 17.6 } }).label(t.text); } }) && fresh() && live) {
+        if (ui.style(__l10nStyle("btn-tray"), __l10nStyle(inline)).id(`tray-${t.a}`).button(t.name, { ...opts, content: () => { ui.style(__l10nStyle({ text: { size: L.portrait ? size : 17.6 } })).label(t.text); } }) && fresh() && live) {
           afterRender(() => { ui.setFocus(null); command(t.a); });
         }
       }
@@ -585,7 +602,7 @@ function runView(L: Layout): void {
   if (app.machine === "countdown") {
     const ch = lastSize.get("countdown") ?? 96;
     ui.place("countdown", { anchor: "top-start", x: L.sx, y: L.sy + (L.sh - ch) / 2 }, () => {
-      const r = ui.column("countdown-col", () => ui.style(ui.preferences().reducedMotion ? "countdown-plain" : "countdown").id("countdown-text").label(String(Math.max(1, app.countdown))), { width: L.sw, align: "center" });
+      const r = ui.column("countdown-col", () => ui.style(__l10nStyle(ui.preferences().reducedMotion ? "countdown-plain" : "countdown")).id("countdown-text").label(String(Math.max(1, app.countdown))), { width: L.sw, align: "center" });
       lastSize.set("countdown", r.height / L.sc);
     });
   }

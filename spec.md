@@ -175,3 +175,11 @@ Cosmetic randomness (decoration, shake) never touches the rules.
 - The old dev `server.js` (static hosting, replay-validated local board) is gone; the platform board is
   the only leaderboard. Solo scores keep `score-script.js`'s range check (no server-side replay).
 - Signed-in paths (foreign save, legacy settings, score posting) are covered by unit tests, not live.
+
+<!-- regional-localization:start -->
+
+### Regional interface languages
+
+The string tables include complete regional variants for `fr-BE`, `de-BE`, `en-SG`, `en-HK`, `en-BQ`, `es-CO`, `de-IT`, `fr-IT`, `es-CL`, `es-AR`, `es-EC`, `de-BR`. These reuse the corresponding existing translations in their language family. The runtime can resolve the exact regional tag. Language selection is available from the game’s Options panel or F2 and is saved per player in `ui.language`. Changes apply during play. Additional national, regional and indigenous language packs are only shipped once every English message has a translation with intact placeholders and markup. Complete additional language tables: `ja-JP`, `nl-BE`, `zh-SG`, `ms-SG`, `zh-HK`, `yue-HK`, `nl-NL`, `fi-FI`, `sv-FI`, `et-EE`, `id-ID`, `vi-VN`, `da-DE`, `lb-BE`, `ta-SG`, `eu-FR`, `oc-FR`, `sl-IT`, `oc-IT`, `ru-FI`, `eu-ES`, `gl-ES`, `ru-EE`, `su-ID`, `km-VN`, `co-FR`, `ca-FR`, `fur-IT`, `ca-IT`, `ca-ES`, `bew-ID`.
+
+<!-- regional-localization:end -->

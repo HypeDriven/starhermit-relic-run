@@ -1,3 +1,4 @@
+import { withLanguageRender as __l10nRender } from "./l10n/menu.ts";
 // Relic Run on the StarHermit engine: the entry module (starhermit.txt
 // engine.entry), played natively by the StarHermit client and in browsers by
 // the engine's web runtime. The rules (src/rules.js), the session
@@ -590,7 +591,7 @@ onUpdate((dt) => {
   audio.update();
   if (app.toast && frame().time > app.toast.until) app.toast = null;
 });
-onRender(() => {
+onRender(__l10nRender(() => {
   uiRects.length = 0;
   drawScreens();
   gestureInput();
@@ -598,4 +599,8 @@ onRender(() => {
     const frac = app.machine === "active" ? Math.min(1, app.sub / stepsPerTick()) : 0;
     render.drawRun(app.sess.state, frac, frameDt);
   } else render.drawIdle(frameDt);
-});
+}));
+
+// localization-runtime:menu
+import { installLanguageMenu as __installLanguageMenu } from "./l10n/menu.ts";
+__installLanguageMenu(false);

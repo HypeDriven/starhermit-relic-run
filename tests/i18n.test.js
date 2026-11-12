@@ -11,7 +11,7 @@ import { ACHIEVEMENTS } from '../src/progress.js';
 
 const ROOT = new URL('../', import.meta.url);
 const read = (p) => readFileSync(new URL(p, ROOT), 'utf8');
-export const LOCALES = ['en-US', 'en-GB', 'es-419', 'es-ES', 'de-DE', 'fr-FR', 'fr-CA', 'pt-BR', 'it-IT'];
+export const LOCALES = ['en-US', 'es-419', 'de-DE', 'fr-FR', 'pt-BR', 'it-IT', 'en-GB', 'es-ES', 'fr-CA', 'fr-BE', 'de-BE', 'en-SG', 'en-HK', 'en-BQ', 'es-CO', 'de-IT', 'fr-IT', 'es-CL', 'es-AR', 'es-EC', 'ja-JP', 'nl-BE', 'zh-SG', 'ms-SG', 'zh-HK', 'yue-HK', 'nl-NL', 'fi-FI', 'sv-FI', 'et-EE', 'id-ID', 'vi-VN', 'de-BR', 'da-DE', 'lb-BE', 'ta-SG', 'eu-FR', 'oc-FR', 'sl-IT', 'oc-IT', 'ru-FI', 'eu-ES', 'gl-ES', 'ru-EE', 'su-ID', 'km-VN', 'co-FR', 'ca-FR', 'fur-IT', 'ca-IT', 'ca-ES', 'bew-ID'];
 const FULL = ['es-419', 'de-DE', 'fr-FR', 'pt-BR', 'it-IT'];
 
 export const tables = () => JSON.parse(read('assets/strings.json'));
