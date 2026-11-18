@@ -99,7 +99,7 @@ function win(L: Layout, x: number, y: number, w: number, h: number): { x: number
 }
 
 // ------------------------------------------------------------------ the frame
-export function drawScreens(): void {
+function drawScreensImmediate(): void {
   const L = layoutNow();
   const f = frame();
   // the stage: the old canvas between the status bar and the rails
@@ -128,7 +128,6 @@ export function drawScreens(): void {
       case "profile": page("profile", L, profileScreen, 640); break;
     }
   }
-  toastView(L);
   if (app.focusNext) {
     const age = f.frame - app.openedFrame;
     if (age >= 1 && !touchOnly()) ui.setFocus(app.focusNext);
@@ -608,14 +607,9 @@ function runView(L: Layout): void {
   }
 }
 
-function toastView(L: Layout): void {
-  const t = app.toast;
-  if (!t) return;
-  const text = t.text();
-  const tw = Math.min(L.lw - 32, 70 * 7.6, textWidth(text, "toast-text") + 34);
-  const th = lastSize.get("toast") ?? 44;
-  ui.place("toast", { anchor: "top-start", x: (L.lw - tw) / 2, y: L.lh - 80 - th }, () => {
-    const r = ui.column("toast-col", () => para(text, tw - 34, "toast-text", "toast-text"), { style: t.invalid ? "toast-invalid" : "toast", width: tw });
-    lastSize.set("toast", r.height / L.sc);
-  });
+export function drawScreens(): void {
+  if (app.screen !== "help") { drawScreensImmediate(); return; }
+  const actions = ["left","right","jump","slide","pause","undo","hint","camera"];
+  const version = JSON.stringify([(app as any).settings ?? (app as any).options ?? {}, (platform as any).options ?? {}, actions.map((action) => bindings(action))]);
+  ui.retain!("help-screen", version, drawScreensImmediate);
 }

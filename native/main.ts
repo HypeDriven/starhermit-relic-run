@@ -93,7 +93,7 @@ export function announce(text: string, assertive = false): void {
 export function click(): void { audio.event("click"); }
 /** ui.toast: 2.6 s at the bottom of the stage (invalid ones in the danger colour, also announced). */
 export function toast(text: () => string, invalid = false): void {
-  app.toast = { text, invalid, until: frame().time + 2.6 };
+  ui.toast!(text(), { kind: invalid ? "error" : "info", duration: 2.6, position: "bottom", offset: 124, style: invalid ? "toast-invalid" : "toast", dismissible: false });
   if (invalid) announce(text(), true);
 }
 /** Pure-touch devices (a phone reports no pointer before its first touch). */
