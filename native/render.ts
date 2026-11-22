@@ -218,6 +218,7 @@ function applyPost(): void {
     overRange: "keep", // minor 29: mix(c, s + max(c - 1, 0), amount) as the page's grade
   } : null;
   renderer.antialias = look.antialias;
+  renderer.motionBlur = look.bloom !== null ? { intensity: 0.25, samples: 8, maxPixels: 16, targetFps: 60, camera: false } : null;
 }
 function applyWind(): void { windU.uWind.value = look?.wind && motionOn() ? 1 : 0; }
 
