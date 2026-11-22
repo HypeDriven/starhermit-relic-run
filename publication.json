@@ -12,7 +12,7 @@
     "metadataSource": "starhermit.txt",
     "createdAt": "2026-09-01T07:01:06.147669+00:00",
     "coverArtSource": "manifest",
-    "coverArtUpdatedAt": "2026-11-18T17:52:36.996226+00:00",
+    "coverArtUpdatedAt": "2026-11-22T14:25:45.861306+00:00",
     "submittedByUserId": "2712e04e-461b-4d23-81ae-e40b429128a8",
     "submittedByUsername": "starhermit",
     "hosting": {
@@ -22,9 +22,9 @@
       "pinnedCommitSha": null,
       "deployedCommitSha": null,
       "deployError": null,
-      "deployedAt": "2026-11-18T17:52:36.985756+00:00",
+      "deployedAt": "2026-11-22T14:25:45.850559+00:00",
       "externalLaunchUrl": null,
-      "engineVersion": "1.44.1",
+      "engineVersion": "1.47.0",
       "deployWarning": null
     },
     "description": "Race through ancient ruins, turning, jumping, and sliding past hazards while collecting relic fragments.",
@@ -36,19 +36,19 @@
     "links": [],
     "isDisabled": false
   },
-  "publishedAt": "2026-11-18T17:52:37.008Z",
-  "sourceCommit": "b016f98500510258f3995ee3f14e5e8fc58d3cb1",
-  "bytesReceived": 3169127,
-  "archiveSha256": "67ad166af397440de02a1b3a84ba55888f5b99bdad65b2a56115d3d752197af6",
+  "publishedAt": "2026-11-22T14:25:46.306Z",
+  "sourceCommit": "139d825c18301a0bbf27da53f0d289f59fa759cd",
+  "bytesReceived": 3169157,
+  "archiveSha256": "2498e96435ce10871bea628abe7b4ddbfbf9ddaf817f927380cbfae93958320d",
   "indexSha256": "7fb9f255b266e2bdda17aa23fd837508c0552ff05fcf62777d557bbdf87a3d17",
   "result": {
     "clientPublished": true,
     "serverImageLoaded": false,
     "imageDigest": null,
-    "bytesReceived": 3169127,
+    "bytesReceived": 3169157,
     "mode": "replace",
     "filesRemoved": 0,
-    "engineVersion": "1.44.1",
+    "engineVersion": "1.47.0",
     "deployWarning": null
   },
   "liveVerification": {
