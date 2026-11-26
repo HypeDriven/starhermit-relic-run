@@ -186,12 +186,16 @@ The string tables include complete regional variants for `fr-BE`, `de-BE`, `en-S
 
 ## Engine 1.50.0
 
-Browser play uses the WebGPU-only StarHermit 1.50.0 web runtime. Automatic ray-traced shadows are enabled on supported Vulkan devices, with mapped-shadow fallbacks elsewhere. Packaging creates block-compressed runtime textures and compressed glTF copies, retaining original image fallbacks.
+Browser play uses the StarHermit 1.50.0 web runtime on WebGPU, or WebGL 2 where WebGPU is missing. Automatic ray-traced shadows are enabled on supported Vulkan devices, with mapped-shadow fallbacks elsewhere. Packaging creates block-compressed runtime textures and compressed glTF copies, retaining original image fallbacks.
 
 The help screen replays through retained native UI while its contents, options, layout and key bindings are unchanged.
 
 Toasts use native engine stacking, styling, accessibility and lifetime management.
 
 Browser rendering uses the engine's asynchronous pipeline creation so newly encountered materials do not stall the page. Native play retains the engine's synchronous pipeline behavior.
+
+**Frame rate (host API 1.49 `setTargetFps`).** Under a finger (`primaryPointer() === "coarse"`) the game caps itself at 30 frames a second on the phone graphics levels (`levelIndex` ≤ 3), where steady 33 ms frames replace uneven ones; elsewhere, the title included (the idle course shows behind its wash), there is no game cap. The run steps on the fixed update, so play is unchanged. The engine sets the cap aside while its menus are open, and the player's Frame rate limit still applies.
+
+**Still scenery (host API 1.49).** Each course's base plane, track tiles, low barriers, fork arrows, risk strips, pillars and tree trunks are `movable = false`, so shadow maps cache them from the first frame. The runner, the spinning relics, the motes, the camera-following sky and the foliage that sways in the wind (vines, bushes and tree crowns, moved by a vertex hook) stay movable. The wind's time uniform stays: its clock freezes when motion is off.
 
 Higher graphics tiers use native per-object motion blur for moving pieces and effects. Camera motion stays sharp, lower tiers omit the effect, and the runtime's Motion blur and Reduce motion preferences remain authoritative.

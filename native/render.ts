@@ -372,6 +372,10 @@ function build(): void {
   base.rotation.x = -PI / 2;
   base.position.set(0, GROUND_Y - 2.2, (nCells * CELL_DEPTH) / 2);
   base.receiveShadow = true;
+  // Still scenery (host API 1.49): the base, track tiles, barriers, fork arrows, risk strips, pillars and tree
+  // trunks stand where the course puts them. The relics spin and bob, and the swaying foliage (vines, bushes,
+  // tree crowns: a wind vertex hook) stays movable, since a still object promises the same vertex output.
+  base.movable = false;
   world.add(base);
 
   // track tiles: one instance per (cell, lane) that is not a gap
@@ -389,6 +393,7 @@ function build(): void {
   });
   tiles.count = tilePositions.length;
   tiles.receiveShadow = true;
+  tiles.movable = false;
   world.add(tiles);
 
   // low barriers and the vine drape on top
@@ -399,6 +404,7 @@ function build(): void {
   bars.castShadow = shadowsOn;
   bars.receiveShadow = det;
   bars.count = lowCells.length;
+  bars.movable = false;
   world.add(bars);
   const vines = new InstancedMesh(new ConeGeometry(0.35, 1.2, 5), M.foliage!, Math.max(1, lowCells.length * 2));
   lowCells.forEach((ci, idx) => {
@@ -432,6 +438,7 @@ function build(): void {
     arrows.setMatrixAt(idx * 2 + 1, b);
   });
   arrows.count = forkCells.length * 2;
+  arrows.movable = false;
   world.add(arrows);
 
   // risk-route tint strips after each fork
@@ -448,6 +455,7 @@ function build(): void {
     }
   }
   strips.count = si;
+  strips.movable = false;
   world.add(strips);
 
   // decoration: pillars + vegetation, from the deterministic decoration stream
@@ -466,6 +474,7 @@ function build(): void {
   pillars.count = pi;
   pillars.castShadow = shadowsOn;
   pillars.receiveShadow = det;
+  pillars.movable = false;
   world.add(pillars);
 
   const nVeg = fol.vegetationPerSide * 2;
@@ -499,6 +508,7 @@ function build(): void {
   }
   trees.count = nTrees;
   trunks.count = nTrees;
+  trunks.movable = false;
   trees.castShadow = shadowsOn;
   world.add(trees, trunks);
 

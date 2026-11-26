@@ -25,7 +25,7 @@ import { withLanguageRender as __l10nRender } from "./l10n/menu.ts";
 // step, before that step's tick, as the browser build applied it between
 // ticks. The runner is drawn between ticks by the frame's interpolation.
 import "./i18n.ts";
-import { levelSettings, clipboard, frame, onFixedUpdate, onPreferencesChange, onRender, onResume, onStart, onSuspend, onUpdate, preferences, setFixedRate } from "starhermit:engine";
+import { levelSettings, clipboard, frame, onFixedUpdate, onPreferencesChange, onRender, onResume, onStart, onSuspend, onUpdate, preferences, setFixedRate, setTargetFps } from "starhermit:engine";
 import { onAction, onGesture, primaryPointer, vibrate } from "starhermit:input";
 import * as ui from "starhermit:ui";
 import { onSessionEnded, requestSignIn } from "starhermit:platform";
@@ -586,8 +586,20 @@ onFixedUpdate(() => {
 });
 
 let frameDt = 0;
+/** The game's frame cap (host API 1.49 setTargetFps, set only on a change): 30 on phone levels
+ * (levelIndex <= 3) under a finger; none otherwise, the title included (the idle course shows
+ * behind its wash). The run steps on the fixed update, so play is unchanged. The engine sets it
+ * aside while its menus are open, and the player's frame-rate limit still applies. */
+let frameCap = -1;
+function capFrames(): void {
+  const cap = frame().levelIndex <= 3 && primaryPointer() === "coarse" ? 30 : 0;
+  if (cap === frameCap) return;
+  frameCap = cap;
+  setTargetFps(cap || null);
+}
 onUpdate((dt) => {
   frameDt = Math.min(0.1, dt);
+  capFrames();
   applyLook();
   applyContrast(ui.preferences().highContrast);
   audio.update();
