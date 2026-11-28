@@ -99,13 +99,22 @@ export function loadSfx(): void {
   for (const name of new Set(Object.values(SFX_BY_EVENT))) {
     loadClip(`sfx/${name}.opus`).then((c) => { clips.set(name, c); }, (e: unknown) => { console.warn(`sfx ${name}: ${String(e)}`); });
   }
-  const warn = (e: unknown): void => { console.warn(`audio: ${String(e)}`); };
-  renderBed().then((c) => { bedClip = c; }, warn);
-  renderMusic().then((c) => { musicClip = c; }, warn);
 }
 
 /** Each frame, once the mixer runs: the loops, then their levels. */
+let __bedsStarted = false;
+function startBeds(): void {
+  if (__bedsStarted) return;
+  __bedsStarted = true;
+  void (async () => {
+    const warn = (e: unknown): void => { console.warn(`audio: ${String(e)}`); };
+    renderBed().then((c) => { bedClip = c; }, warn);
+    renderMusic().then((c) => { musicClip = c; }, warn);
+  })();
+}
+
 export function update(): void {
+  startBeds();
   if (context.state !== "running" || !bedClip || !musicClip) return;
   const on = running && !suspended;
   if (on && !bedVoice) {
